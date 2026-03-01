@@ -719,39 +719,75 @@ export default function UploadPage() {
                 </div>
               </div>
 
-              {/* Continue button */}
-              <Button
-                onClick={async () => {
-                  // Save name, note, currency if changed
-                  if (
-                    receiptName !== (receipt.name || "") ||
-                    receiptNote !== (receipt.note || "") ||
-                    editedCurrency !== receipt.currency
-                  ) {
-                    try {
-                      await fetch(`/api/sessions/${code}/receipts`, {
-                        method: "PATCH",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          receiptId: receipt.id,
-                          participantId,
-                          updates: {
-                            name: receiptName.trim() || undefined,
-                            note: receiptNote.trim() || undefined,
-                            currency: editedCurrency,
-                          },
-                        }),
-                      });
-                    } catch {
-                      // Ignore errors, just continue
+              {/* Action buttons - primary action is to select items */}
+              <div className="space-y-3">
+                <Button
+                  onClick={async () => {
+                    // Save name, note, currency if changed
+                    if (
+                      receiptName !== (receipt.name || "") ||
+                      receiptNote !== (receipt.note || "") ||
+                      editedCurrency !== receipt.currency
+                    ) {
+                      try {
+                        await fetch(`/api/sessions/${code}/receipts`, {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            receiptId: receipt.id,
+                            participantId,
+                            updates: {
+                              name: receiptName.trim() || undefined,
+                              note: receiptNote.trim() || undefined,
+                              currency: editedCurrency,
+                            },
+                          }),
+                        });
+                      } catch {
+                        // Ignore errors, just continue
+                      }
                     }
-                  }
-                  router.push(`/session/${code}`);
-                }}
-                className="w-full h-11 bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg font-normal"
-              >
-                Continue
-              </Button>
+                    router.push(`/session/${code}/select`);
+                  }}
+                  className="w-full h-11 bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg font-normal"
+                >
+                  Select items now
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    // Save name, note, currency if changed
+                    if (
+                      receiptName !== (receipt.name || "") ||
+                      receiptNote !== (receipt.note || "") ||
+                      editedCurrency !== receipt.currency
+                    ) {
+                      try {
+                        await fetch(`/api/sessions/${code}/receipts`, {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            receiptId: receipt.id,
+                            participantId,
+                            updates: {
+                              name: receiptName.trim() || undefined,
+                              note: receiptNote.trim() || undefined,
+                              currency: editedCurrency,
+                            },
+                          }),
+                        });
+                      } catch {
+                        // Ignore errors, just continue
+                      }
+                    }
+                    router.push(`/session/${code}`);
+                  }}
+                  className="w-full h-11 border-neutral-200 hover:bg-neutral-50 rounded-lg font-normal"
+                >
+                  Back to session
+                </Button>
+              </div>
             </div>
           )}
 

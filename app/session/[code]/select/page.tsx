@@ -101,7 +101,7 @@ export default function SelectPage() {
     code,
   ]);
 
-  const handleNotMine = () => {
+  const handleNotMine = useCallback(() => {
     if (!item || !receipt) return;
     // Record history
     setHistory((prev) => [
@@ -121,9 +121,9 @@ export default function SelectPage() {
       return next;
     });
     nextItem();
-  };
+  }, [item, receipt, currentItemIndex, nextItem]);
 
-  const handleSkip = () => {
+  const handleSkip = useCallback(() => {
     if (!item || !receipt) return;
     // Record history
     setHistory((prev) => [
@@ -134,9 +134,9 @@ export default function SelectPage() {
       setSkippedItems((prev) => new Set(prev).add(item.id));
     }
     nextItem();
-  };
+  }, [item, receipt, currentItemIndex, isReviewingSkipped, nextItem]);
 
-  const handleUndo = async () => {
+  const handleUndo = useCallback(async () => {
     if (history.length === 0 || isUndoing) return;
 
     const lastEntry = history[history.length - 1];
@@ -185,51 +185,50 @@ export default function SelectPage() {
     } finally {
       setIsUndoing(false);
     }
-  };
+  }, [history, isUndoing, code, participantId, setSession]);
 
-  const claimItem = async (
-    type: "individual" | "shared",
-    sharedWith?: string[],
-    claimedQuantity?: number
-  ) => {
-    if (!participantId || !item || !receipt) return;
+  const claimItem = useCallback(
+    async (type: "individual" | "shared", sharedWith?: string[], claimedQuantity?: number) => {
+      if (!participantId || !item || !receipt) return;
 
-    try {
-      const res = await fetch(`/api/sessions/${code}/claim`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          receiptId: receipt.id,
-          itemId: item.id,
-          participantId,
-          type,
-          sharedWith,
-          claimedQuantity: claimedQuantity || item.quantity,
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setSession(data.session);
-        // Record history
-        setHistory((prev) => [
-          ...prev,
-          {
-            itemId: item.id,
+      try {
+        const res = await fetch(`/api/sessions/${code}/claim`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
             receiptId: receipt.id,
-            action: "claim",
-            previousIndex: currentItemIndex,
-          },
-        ]);
-        nextItem();
+            itemId: item.id,
+            participantId,
+            type,
+            sharedWith,
+            claimedQuantity: claimedQuantity || item.quantity,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setSession(data.session);
+          // Record history
+          setHistory((prev) => [
+            ...prev,
+            {
+              itemId: item.id,
+              receiptId: receipt.id,
+              action: "claim",
+              previousIndex: currentItemIndex,
+            },
+          ]);
+          nextItem();
+        }
+      } catch {
+        toast.error("Failed to claim item");
       }
-    } catch {
-      toast.error("Failed to claim item");
-    }
-  };
+    },
+    [participantId, item, receipt, code, setSession, currentItemIndex, nextItem]
+  );
 
   const handleSwipeLeft = () => handleNotMine();
-  const handleSwipeRight = () => {
+  const handleSwipeRight = useCallback(() => {
     if (!item) return;
     // If quantity > 1, show quantity dialog
     if (item.quantity > 1) {
@@ -239,13 +238,78 @@ export default function SelectPage() {
     } else {
       claimItem("individual", undefined, 1);
     }
-  };
-  const handleSwipeUp = () => {
+  }, [item, claimItem]);
+  const handleSwipeUp = useCallback(() => {
     if (!item) return;
     setCurrentItem(item);
     setSelectedParticipants(session?.participants.map((p) => p.id) || []);
     setShowSharedDialog(true);
-  };
+  }, [item, session?.participants]);
+
+  // Keyboard shortcuts for faster selection
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger when typing in inputs or dialogs are open
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        showSharedDialog ||
+        showQuantityDialog
+      ) {
+        return;
+      }
+
+      switch (e.key) {
+        case "ArrowLeft":
+        case "n":
+        case "N":
+          e.preventDefault();
+          handleNotMine();
+          break;
+        case "ArrowRight":
+        case "y":
+        case "Y":
+        case " ": // Spacebar
+          e.preventDefault();
+          handleSwipeRight();
+          break;
+        case "ArrowUp":
+        case "s":
+        case "S":
+          e.preventDefault();
+          handleSwipeUp();
+          break;
+        case "ArrowDown":
+        case "k":
+        case "K":
+          e.preventDefault();
+          handleSkip();
+          break;
+        case "z":
+        case "Z":
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            handleUndo();
+          }
+          break;
+        case "Backspace":
+          e.preventDefault();
+          handleUndo();
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    handleNotMine,
+    handleSkip,
+    handleSwipeRight,
+    handleSwipeUp,
+    handleUndo,
+    showSharedDialog,
+    showQuantityDialog,
+  ]);
 
   const handleQuantityConfirm = () => {
     claimItem("individual", undefined, selectedQuantity);
@@ -414,14 +478,28 @@ export default function SelectPage() {
                 <UserPlus className="w-5 h-5" />
               </button>
             </div>
-            {/* Button labels */}
+            {/* Button labels with keyboard hints */}
             <div className="flex justify-center items-center gap-3 mt-2 text-xs text-neutral-400">
-              <span className="w-10 text-center">Undo</span>
-              <span className="w-12 text-center">Not mine</span>
-              <span className="w-12 text-center">Skip</span>
-              <span className="w-14 text-center">Mine</span>
-              <span className="w-12 text-center">Share</span>
+              <span className="w-10 text-center" title="Backspace or Ctrl+Z">
+                Undo
+              </span>
+              <span className="w-12 text-center" title="← or N">
+                Not mine
+              </span>
+              <span className="w-12 text-center" title="↓ or K">
+                Skip
+              </span>
+              <span className="w-14 text-center" title="→ or Y or Space">
+                Mine
+              </span>
+              <span className="w-12 text-center" title="↑ or S">
+                Share
+              </span>
             </div>
+            {/* Keyboard shortcut hint */}
+            <p className="text-center text-xs text-neutral-300 mt-4">
+              Use arrow keys or N/Y/S/K for quick selection
+            </p>
           </div>
         ) : (
           <div className="text-center py-12">
@@ -435,46 +513,23 @@ export default function SelectPage() {
           </div>
         )}
 
-        {/* My claimed items */}
-        <div className="space-y-3">
-          <span className="text-sm text-neutral-500 block">Your items</span>
-          {session.receipts.map((r) => {
-            const myItems = r.items.filter((i) =>
-              i.claims.some((c) => c.participantId === participantId)
-            );
-            if (myItems.length === 0) return null;
-
-            return (
-              <div key={r.id} className="space-y-2">
-                {myItems.map((i) => {
-                  const myClaim = i.claims.find((c) => c.participantId === participantId);
-                  const myQty = myClaim?.claimedQuantity || i.quantity;
-                  const showQty = i.quantity > 1;
-                  const myPrice = showQty ? i.unitPrice * myQty : i.totalPrice;
-                  return (
-                    <div
-                      key={i.id}
-                      className="flex justify-between p-3 rounded-lg border border-neutral-200"
-                    >
-                      <span>
-                        {i.name}
-                        {showQty && (
-                          <span className="text-neutral-400 ml-1">
-                            ({myQty} of {i.quantity})
-                          </span>
-                        )}
-                      </span>
-                      <span className="font-mono">{formatCurrency(myPrice, r.currency)}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })}
-          {myTotal === 0 && (
-            <p className="text-center text-neutral-400 py-4">No items claimed yet</p>
-          )}
-        </div>
+        {/* Quick link to My Items */}
+        {myTotal > 0 && (
+          <Link
+            href={`/session/${code}/my-items`}
+            className="block text-center text-sm text-neutral-500 hover:text-neutral-700 transition-colors py-2"
+          >
+            View your{" "}
+            {session.receipts.reduce(
+              (sum, r) =>
+                sum +
+                r.items.filter((i) => i.claims.some((c) => c.participantId === participantId))
+                  .length,
+              0
+            )}{" "}
+            claimed items →
+          </Link>
+        )}
       </div>
 
       {/* Quantity dialog */}

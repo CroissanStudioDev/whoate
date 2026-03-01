@@ -327,50 +327,80 @@ export default function SessionPage() {
 
           {/* Actions */}
           <div className="space-y-3">
-            <Button
-              onClick={() => router.push(`/session/${code}/upload`)}
-              className="w-full h-11 bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg font-normal"
-            >
-              Upload receipt
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-
-            {hasReceipts && (
+            {/* Primary action changes based on context */}
+            {!hasReceipts ? (
+              <Button
+                onClick={() => router.push(`/session/${code}/upload`)}
+                className="w-full h-11 bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg font-normal"
+              >
+                Upload receipt
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            ) : myClaimedItems === 0 ? (
               <>
+                <Button
+                  onClick={() => router.push(`/session/${code}/select`)}
+                  className="w-full h-11 bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg font-normal"
+                >
+                  Select your items
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => router.push(`/session/${code}/upload`)}
+                  className="w-full h-11 border-neutral-200 hover:bg-neutral-50 rounded-lg font-normal"
+                >
+                  Upload another receipt
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  onClick={() => router.push(`/session/${code}/summary`)}
+                  className="w-full h-11 bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg font-normal"
+                >
+                  View who owes what
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
                 <Button
                   variant="outline"
                   onClick={() => router.push(`/session/${code}/select`)}
                   className="w-full h-11 border-neutral-200 hover:bg-neutral-50 rounded-lg font-normal"
                 >
-                  Select your items
+                  Select more items
                 </Button>
+              </>
+            )}
 
+            {/* Secondary actions */}
+            {hasReceipts && (
+              <div className="flex gap-3 pt-2">
                 <Button
                   variant="outline"
                   onClick={() => router.push(`/session/${code}/my-items`)}
-                  className="w-full h-11 border-neutral-200 hover:bg-neutral-50 rounded-lg font-normal"
+                  className="flex-1 h-10 border-neutral-200 hover:bg-neutral-50 rounded-lg font-normal text-sm"
                 >
-                  <ClipboardList className="w-4 h-4 mr-2" />
+                  <ClipboardList className="w-4 h-4 mr-1.5" />
                   My items {myClaimedItems > 0 && `(${myClaimedItems})`}
                 </Button>
-
-                <Button
-                  variant="outline"
-                  onClick={() => router.push(`/session/${code}/summary`)}
-                  className="w-full h-11 border-neutral-200 hover:bg-neutral-50 rounded-lg font-normal"
-                >
-                  View who owes what
-                </Button>
-
                 <Button
                   variant="outline"
                   onClick={() => router.push(`/session/${code}/edit`)}
-                  className="w-full h-11 border-neutral-200 hover:bg-neutral-50 rounded-lg font-normal"
+                  className="flex-1 h-10 border-neutral-200 hover:bg-neutral-50 rounded-lg font-normal text-sm"
                 >
-                  <Pencil className="w-4 h-4 mr-2" />
-                  Edit receipts
+                  <Pencil className="w-4 h-4 mr-1.5" />
+                  Edit
                 </Button>
-              </>
+                {myClaimedItems === 0 && (
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push(`/session/${code}/upload`)}
+                    className="flex-1 h-10 border-neutral-200 hover:bg-neutral-50 rounded-lg font-normal text-sm"
+                  >
+                    Add receipt
+                  </Button>
+                )}
+              </div>
             )}
           </div>
 
