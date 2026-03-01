@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, CreditCard, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
+import { ArrowLeft, CreditCard, Loader2, Pencil, Plus, Store, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import { useSessionStore, useUserStore } from "@/lib/store";
 import type { Receipt, ReceiptItem } from "@/types";
-import { formatCurrency } from "@/types";
+import { CURRENCY_SYMBOLS, formatCurrency } from "@/types";
 
 interface EditingItem {
   receiptId: string;
@@ -213,6 +213,36 @@ export default function EditPage() {
     }
   };
 
+  const handleChangeCurrency = async (receiptId: string, newCurrency: string) => {
+    if (!session) return;
+
+    setIsSaving(true);
+    try {
+      const res = await fetch(`/api/sessions/${code}/receipts`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          receiptId,
+          participantId,
+          updates: { currency: newCurrency },
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setSession(data.session);
+        toast.success("Currency updated");
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Failed to update currency");
+      }
+    } catch {
+      toast.error("Failed to update currency");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -273,6 +303,7 @@ export default function EditPage() {
                 }
                 onDeleteReceipt={() => setDeleteConfirm({ type: "receipt", receiptId: receipt.id })}
                 onChangePayer={(newPayerId) => handleChangePayer(receipt.id, newPayerId)}
+                onChangeCurrency={(newCurrency) => handleChangeCurrency(receipt.id, newCurrency)}
               />
             ))}
 
@@ -404,6 +435,7 @@ interface ReceiptCardProps {
   onDeleteItem: (itemId: string) => void;
   onDeleteReceipt: () => void;
   onChangePayer: (newPayerId: string) => void;
+  onChangeCurrency: (newCurrency: string) => void;
 }
 
 function ReceiptCard({
@@ -415,6 +447,7 @@ function ReceiptCard({
   onDeleteItem,
   onDeleteReceipt,
   onChangePayer,
+  onChangeCurrency,
 }: ReceiptCardProps) {
   const uploaderName =
     session.participants.find((p) => p.id === receipt.uploadedBy)?.name || "Unknown";
@@ -424,8 +457,19 @@ function ReceiptCard({
   return (
     <div className="border border-neutral-200 rounded-lg overflow-hidden">
       {/* Receipt header */}
-      <div className="p-4 bg-neutral-50">
-        <div className="flex items-center justify-between mb-3">
+      <div className="p-4 bg-neutral-50 space-y-3">
+        {/* Name & establishment */}
+        {(receipt.name || receipt.establishment) && (
+          <div className="flex items-center gap-2">
+            <Store className="w-4 h-4 text-neutral-400" />
+            <span className="font-medium">{receipt.name || receipt.establishment}</span>
+          </div>
+        )}
+
+        {/* Note */}
+        {receipt.note && <p className="text-sm text-neutral-500 italic">"{receipt.note}"</p>}
+
+        <div className="flex items-center justify-between">
           <div>
             <p className="font-medium">{formatCurrency(receipt.total, receipt.currency)}</p>
             <p className="text-sm text-neutral-500">
@@ -444,25 +488,45 @@ function ReceiptCard({
           )}
         </div>
 
-        {/* Payer selector */}
-        <div className="flex items-center gap-2">
-          <CreditCard className="w-4 h-4 text-neutral-400" />
-          <span className="text-sm text-neutral-500">Paid by:</span>
-          {isUploader ? (
-            <Select value={receipt.paidBy} onValueChange={onChangePayer} disabled={isSaving}>
-              <SelectTrigger className="h-8 w-auto min-w-[120px] border-neutral-200 rounded-lg text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {session.participants.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : (
-            <span className="text-sm font-medium">{payerName}</span>
+        {/* Payer & Currency selectors */}
+        <div className="flex flex-wrap gap-4">
+          <div className="flex items-center gap-2">
+            <CreditCard className="w-4 h-4 text-neutral-400" />
+            <span className="text-sm text-neutral-500">Paid by:</span>
+            {isUploader ? (
+              <Select value={receipt.paidBy} onValueChange={onChangePayer} disabled={isSaving}>
+                <SelectTrigger className="h-8 w-auto min-w-[100px] border-neutral-200 rounded-lg text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {session.participants.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <span className="text-sm font-medium">{payerName}</span>
+            )}
+          </div>
+
+          {isUploader && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-neutral-500">Currency:</span>
+              <Select value={receipt.currency} onValueChange={onChangeCurrency} disabled={isSaving}>
+                <SelectTrigger className="h-8 w-auto min-w-[80px] border-neutral-200 rounded-lg text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(CURRENCY_SYMBOLS).map(([currCode, symbol]) => (
+                    <SelectItem key={currCode} value={currCode}>
+                      {symbol} {currCode}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           )}
         </div>
       </div>

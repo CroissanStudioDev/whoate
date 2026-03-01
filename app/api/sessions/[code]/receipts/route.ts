@@ -47,6 +47,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     let currency: string;
     let tax: number;
     let tip: number;
+    let establishment: string | undefined;
 
     // Check if this is a manual entry or image upload
     if (body.manual && body.items) {
@@ -84,6 +85,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       currency = ocrResult.currency;
       tax = ocrResult.tax ?? 0;
       tip = ocrResult.tip ?? 0;
+      establishment = ocrResult.establishment;
     } else {
       return NextResponse.json(
         { error: "Either image or manual items are required" },
@@ -105,6 +107,9 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const receipt: Receipt = {
       id: uuid(),
+      name: body.name || undefined,
+      establishment,
+      note: body.note || undefined,
       uploadedBy: participantId,
       paidBy: paidBy || participantId,
       currency,
@@ -168,6 +173,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     if (updates.tax !== undefined) receipt.tax = updates.tax;
     if (updates.tip !== undefined) receipt.tip = updates.tip;
     if (updates.taxIncluded !== undefined) receipt.taxIncluded = updates.taxIncluded;
+    if (updates.name !== undefined) receipt.name = updates.name || undefined;
+    if (updates.note !== undefined) receipt.note = updates.note || undefined;
 
     if (updates.items) {
       receipt.items = updates.items.map((item: ReceiptItem) => ({

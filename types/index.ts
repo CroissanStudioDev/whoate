@@ -44,6 +44,9 @@ export interface Participant {
 // Receipt
 export interface Receipt {
   id: string;
+  name?: string; // Receipt name/title (e.g., "Dinner at Mario's")
+  establishment?: string; // Detected establishment name from OCR
+  note?: string; // User note shown during item selection
   uploadedBy: string;
   paidBy: string;
   currency: string;
@@ -101,6 +104,7 @@ export interface JoinSessionResponse {
 // OCR Response from OpenAI
 export interface OCRResult {
   currency: string;
+  establishment?: string; // Detected restaurant/venue name
   items: {
     name: string;
     quantity: number;
@@ -119,6 +123,7 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
   EUR: "€",
   GBP: "£",
   RUB: "₽",
+  RSD: "RSD",
   JPY: "¥",
   CNY: "¥",
   KRW: "₩",
@@ -135,7 +140,22 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
   NOK: "kr",
   DKK: "kr",
   CZK: "Kč",
+  UAH: "₴",
+  ILS: "₪",
+  SGD: "S$",
+  HKD: "HK$",
+  NZD: "NZ$",
+  ZAR: "R",
+  AED: "د.إ",
+  SAR: "﷼",
+  VND: "₫",
+  IDR: "Rp",
+  MYR: "RM",
+  PHP: "₱",
 };
+
+// Supported currencies for manual selection
+export const SUPPORTED_CURRENCIES = Object.keys(CURRENCY_SYMBOLS);
 
 export function formatCurrency(amount: number, currency: string): string {
   const symbol = CURRENCY_SYMBOLS[currency] || currency;

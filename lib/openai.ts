@@ -30,6 +30,7 @@ function getSystemPrompt(translateTo?: string): string {
 Return JSON in this exact format:
 {
   "currency": "USD",
+  "establishment": "Restaurant Name",
   "items": [
     {
       "name": "Item name",
@@ -45,11 +46,12 @@ Return JSON in this exact format:
 }
 
 Rules:
+- Extract the establishment/restaurant/store name from the receipt header (usually at the top)
 - Detect currency from symbols (€, $, £, ₽, ¥, ₩, ฿, etc.) or text on the receipt
 - If quantity is not specified, assume 1
 - Calculate unit_price as total_price / quantity if not shown
 - Include tax/service charge as metadata, NOT as line items
-- Use ISO 4217 currency codes (USD, EUR, RUB, THB, JPY, GBP, etc.)
+- Use ISO 4217 currency codes (USD, EUR, RUB, RSD, THB, JPY, GBP, etc.)
 - If unsure about a value, use null
 - Always return valid JSON, no markdown code blocks
 - Extract ALL items visible on the receipt
@@ -112,6 +114,7 @@ export async function parseReceipt(imageBase64: string, translateTo?: string): P
     // Validate and normalize
     return {
       currency: result.currency || "USD",
+      establishment: result.establishment || undefined,
       items: (result.items || []).map((item) => ({
         name: item.name || "Unknown item",
         quantity: item.quantity || 1,

@@ -364,6 +364,8 @@ export default function SelectPage() {
             <SwipeCard
               item={item}
               currency={receipt.currency}
+              receiptName={receipt.name || receipt.establishment}
+              receiptNote={receipt.note}
               onSwipeLeft={handleSwipeLeft}
               onSwipeRight={handleSwipeRight}
               onSwipeUp={handleSwipeUp}

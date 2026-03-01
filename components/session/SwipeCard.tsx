@@ -13,6 +13,8 @@ interface SwipeCardProps {
     totalPrice: number;
   };
   currency: string;
+  receiptName?: string;
+  receiptNote?: string;
   onSwipeLeft: () => void;
   onSwipeRight: () => void;
   onSwipeUp: () => void;
@@ -21,6 +23,8 @@ interface SwipeCardProps {
 export function SwipeCard({
   item,
   currency,
+  receiptName,
+  receiptNote,
   onSwipeLeft,
   onSwipeRight,
   onSwipeUp,
@@ -80,6 +84,9 @@ export function SwipeCard({
       >
         <div className="p-8 rounded-lg border border-neutral-200 bg-white">
           <div className="text-center space-y-3">
+            {receiptName && (
+              <p className="text-xs text-neutral-400 uppercase tracking-wide">{receiptName}</p>
+            )}
             <h2 className="text-xl font-medium">{item.name}</h2>
             {item.quantity > 1 && (
               <p className="text-neutral-400">
@@ -87,6 +94,11 @@ export function SwipeCard({
               </p>
             )}
             <p className="text-3xl font-mono">{formatCurrency(item.totalPrice, currency)}</p>
+            {receiptNote && (
+              <p className="text-sm text-neutral-500 pt-2 border-t border-neutral-100">
+                {receiptNote}
+              </p>
+            )}
           </div>
         </div>
       </motion.div>

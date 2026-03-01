@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Check, Info, Loader2, Pencil, Plus, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, Check, Info, Loader2, Pencil, Plus, Store, Trash2, Upload } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { useSessionStore, useUserStore } from "@/lib/store";
 import type { Receipt, ReceiptItem } from "@/types";
 import { CURRENCY_SYMBOLS, formatCurrency } from "@/types";
@@ -53,6 +54,9 @@ export default function UploadPage() {
   const [editedItems, setEditedItems] = useState<ReceiptItem[]>([]);
   const [editedTax, setEditedTax] = useState("");
   const [editedTip, setEditedTip] = useState("");
+  const [receiptName, setReceiptName] = useState("");
+  const [receiptNote, setReceiptNote] = useState("");
+  const [editedCurrency, setEditedCurrency] = useState("");
 
   const handleUpload = useCallback(
     async (base64: string) => {
@@ -83,6 +87,9 @@ export default function UploadPage() {
         const data = await res.json();
         setReceipt(data.receipt);
         setTaxIncluded(data.receipt.taxIncluded || false);
+        setReceiptName(data.receipt.name || data.receipt.establishment || "");
+        setReceiptNote(data.receipt.note || "");
+        setEditedCurrency(data.receipt.currency);
         addReceipt(data.receipt);
         toast.success(`Found ${data.receipt.items.length} items!`);
       } catch (err) {
@@ -250,6 +257,9 @@ export default function UploadPage() {
     setEditedItems([...receipt.items]);
     setEditedTax(receipt.tax.toString());
     setEditedTip(receipt.tip.toString());
+    setEditedCurrency(receipt.currency);
+    setReceiptName(receipt.name || receipt.establishment || "");
+    setReceiptNote(receipt.note || "");
     setIsEditing(true);
   };
 
@@ -313,6 +323,9 @@ export default function UploadPage() {
             })),
             tax: Number.parseFloat(editedTax) || 0,
             tip: Number.parseFloat(editedTip) || 0,
+            currency: editedCurrency,
+            name: receiptName.trim() || undefined,
+            note: receiptNote.trim() || undefined,
           },
         }),
       });
@@ -579,6 +592,14 @@ export default function UploadPage() {
                 </button>
               </div>
 
+              {/* Establishment */}
+              {receipt.establishment && (
+                <div className="flex items-center gap-2 p-3 rounded-lg border border-neutral-200 bg-neutral-50">
+                  <Store className="w-4 h-4 text-neutral-400" />
+                  <span className="text-sm text-neutral-600">{receipt.establishment}</span>
+                </div>
+              )}
+
               {/* Items list */}
               <div className="space-y-2">
                 {receipt.items.map((item: ReceiptItem) => (
@@ -599,6 +620,48 @@ export default function UploadPage() {
                     </p>
                   </div>
                 ))}
+              </div>
+
+              {/* Receipt name & note */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <span className="text-sm text-neutral-500 block">Receipt name (optional)</span>
+                  <Input
+                    placeholder={receipt.establishment || "e.g., Dinner at Mario's"}
+                    value={receiptName}
+                    onChange={(e) => setReceiptName(e.target.value)}
+                    className="h-11 border-neutral-200 rounded-lg"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <span className="text-sm text-neutral-500 block">
+                    Note (shown during selection)
+                  </span>
+                  <Textarea
+                    placeholder="e.g., Birthday dinner, Alice's treat for dessert"
+                    value={receiptNote}
+                    onChange={(e) => setReceiptNote(e.target.value)}
+                    className="border-neutral-200 rounded-lg resize-none"
+                    rows={2}
+                  />
+                </div>
+              </div>
+
+              {/* Currency */}
+              <div className="space-y-2">
+                <span className="text-sm text-neutral-500 block">Currency</span>
+                <Select value={editedCurrency} onValueChange={setEditedCurrency}>
+                  <SelectTrigger className="h-11 border-neutral-200 rounded-lg">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(CURRENCY_SYMBOLS).map(([currCode, symbol]) => (
+                      <SelectItem key={currCode} value={currCode}>
+                        {symbol} {currCode}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Tax toggle */}
@@ -658,7 +721,33 @@ export default function UploadPage() {
 
               {/* Continue button */}
               <Button
-                onClick={() => router.push(`/session/${code}`)}
+                onClick={async () => {
+                  // Save name, note, currency if changed
+                  if (
+                    receiptName !== (receipt.name || "") ||
+                    receiptNote !== (receipt.note || "") ||
+                    editedCurrency !== receipt.currency
+                  ) {
+                    try {
+                      await fetch(`/api/sessions/${code}/receipts`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          receiptId: receipt.id,
+                          participantId,
+                          updates: {
+                            name: receiptName.trim() || undefined,
+                            note: receiptNote.trim() || undefined,
+                            currency: editedCurrency,
+                          },
+                        }),
+                      });
+                    } catch {
+                      // Ignore errors, just continue
+                    }
+                  }
+                  router.push(`/session/${code}`);
+                }}
                 className="w-full h-11 bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg font-normal"
               >
                 Continue
@@ -678,6 +767,46 @@ export default function UploadPage() {
                 >
                   Cancel
                 </button>
+              </div>
+
+              {/* Receipt name & note */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <span className="text-sm text-neutral-500 block">Receipt name</span>
+                  <Input
+                    placeholder={receipt.establishment || "e.g., Dinner at Mario's"}
+                    value={receiptName}
+                    onChange={(e) => setReceiptName(e.target.value)}
+                    className="h-11 border-neutral-200 rounded-lg"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <span className="text-sm text-neutral-500 block">Note</span>
+                  <Textarea
+                    placeholder="e.g., Birthday dinner"
+                    value={receiptNote}
+                    onChange={(e) => setReceiptNote(e.target.value)}
+                    className="border-neutral-200 rounded-lg resize-none"
+                    rows={2}
+                  />
+                </div>
+              </div>
+
+              {/* Currency */}
+              <div className="space-y-2">
+                <span className="text-sm text-neutral-500 block">Currency</span>
+                <Select value={editedCurrency} onValueChange={setEditedCurrency}>
+                  <SelectTrigger className="h-11 border-neutral-200 rounded-lg">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(CURRENCY_SYMBOLS).map(([currCode, symbol]) => (
+                      <SelectItem key={currCode} value={currCode}>
+                        {symbol} {currCode}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Editable items */}
