@@ -35,29 +35,43 @@ Serbian/European receipts have **VAT included** in prices. Models must understan
 
 ## Real-World Benchmark Results
 
-### Test: Serbian Restaurant Receipt
+### Test Dataset: 4 Serbian Receipts
 
-**Image**: Thermal receipt with 12 items, Cyrillic text, VAT included
-**Expected**: total=6455 RSD, tax=1075.83 (already included)
+| # | Type | Expected Total | Items | Features |
+|---|------|----------------|-------|----------|
+| 1 | Restaurant | 6,455 RSD | 12 | Cyrillic, VAT included |
+| 2 | IKEA Serbia | 3,749 RSD | 10 | Mixed script, -90 discount |
+| 3 | Restaurant IVA NBC | 11,225 RSD | 13 | Cyrillic, large receipt |
+| 4 | My Restaurant LLC | 11,090 RSD | 18 | Split by 5 guests |
 
-| Model | Total | Time | Input Tokens | Output Tokens | Cost/Request |
-|-------|-------|------|--------------|---------------|--------------|
-| **gemini-3.1-flash** | ✅ 6455 | 6.1s | 559 | 750 | ~$0.0013 |
-| **gemini-2.5-flash** | ✅ 6455 | 3.4s | 559 | 759 | ~$0.0021 |
-| gemini-2.5-flash-lite | ❌ 7530.83 | 2.3s | 559 | 765 | ~$0.0005 |
-| gemini-2.0-flash | ✅ 6455 | 4.9s | 1589 | 778 | ~$0.0005 |
-| gemini-2.0-flash-lite | ❌ null | 5.5s | 1589 | 772 | ~$0.0003 |
-| grok-4.1-fast | ✅ 6455 | ~15s | 2010 | 12208* | ~$0.0065 |
-| grok-4-fast | ✅ 6455 | 107s | 2215 | 9644 | ~$0.005 |
+### Results: 100% Accurate Models
 
-*Grok 4.1 uses 11,604 reasoning tokens (95% of output)
+| Model | R1 | R2 | R3 | R4 | Accuracy | Avg Time | Cost/Receipt |
+|-------|----|----|----|----|----------|----------|--------------|
+| **gemini-3.1-flash** | ✅ 6455 | ✅ 3749 | ✅ 11225 | ✅ 11090 | **4/4** | 6.5s | ~$0.0013 |
+| **gemini-2.5-flash** | ✅ 6455 | ✅ 3749 | ✅ 11225 | ✅ 11090 | **4/4** | 4.2s | ~$0.0021 |
+| **gemini-2.0-flash** | ✅ 6455 | ✅ 3749 | ✅ 11225 | ✅ 11090 | **4/4** | 5.4s | ~$0.0005 |
+
+### Results: Partially Accurate Models
+
+| Model | R1 | R2 | R3 | R4 | Accuracy | Avg Time | Issue |
+|-------|----|----|----|----|----------|----------|-------|
+| gemini-2.5-flash-lite | ✅ | ✅ | ❌ +VAT | ✅ | 3/4 | 2.4s | Adds tax on top |
+| gemini-2.0-flash-lite | ❌ null | ✅ | ✅ | ✅ | 3/4 | 5.4s | Returns null |
+| grok-4.1-fast | ❌ | ✅ | ❌ JSON | ✅ | 2/4 | **66s** | Slow, unstable |
 
 ### Winner: Gemini 3.1 Flash
 
-- ✅ Correct total interpretation (VAT included)
+- ✅ **100% accuracy** on all 4 test receipts
+- ✅ Correct VAT handling (European receipts)
 - ✅ Detects currency (RSD)
-- ✅ Cheapest accurate model ($0.0013/receipt)
-- ⚠️ Slightly slower than 2.5 (6s vs 3.4s)
+- ✅ **Cheapest** accurate model (~$0.0013/receipt)
+- ⚠️ Slightly slower than 2.5 (6.5s vs 4.2s)
+
+### Alternative: Gemini 2.0 Flash
+
+- ✅ 100% accuracy, cheapest overall (~$0.0005/receipt)
+- ⚠️ May not detect currency automatically
 
 ---
 
@@ -204,12 +218,13 @@ OPENAI_MODEL=glm-ocr
 
 ## Models NOT Recommended
 
-| Model | Reason |
-|-------|--------|
-| **Gemini 2.5 Flash Lite** | Adds tax on top of VAT-inclusive totals |
-| **Qwen2.5-VL 7B** | Same issue with European receipts |
-| **Grok 4.x** | Excessive reasoning tokens (5x cost) |
-| **Grok 4 Fast** | 107 seconds per request |
+| Model | Accuracy | Issue |
+|-------|----------|-------|
+| **Gemini 2.5 Flash Lite** | 3/4 | Adds VAT on top of VAT-inclusive totals |
+| **Gemini 2.0 Flash Lite** | 3/4 | Returns null for some totals |
+| **Grok 4.1 Fast** | 2/4 | 66s avg, JSON errors, wrong totals |
+| **Grok 4 Fast** | - | 107 seconds per request |
+| **Qwen2.5-VL 7B** | - | Same VAT issue as Flash Lite |
 
 ---
 
