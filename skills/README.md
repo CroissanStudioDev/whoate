@@ -31,13 +31,25 @@ openclaw skill add whoate https://raw.githubusercontent.com/CroissanStudioDev/wh
 
 ## Usage
 
-1. **Start WhoAte server:**
-   ```bash
-   cd whoate
-   npm run dev
-   ```
+The skill uses **https://whoate.app** by default. No server setup needed!
 
-2. **Use the skill:**
+```
+/whoate parse /path/to/receipt.jpg
+/whoate create "Alice"
+/whoate join ABC123 "Bob"
+/whoate summary ABC123
+```
+
+### Local Development
+
+For local development, set the URL:
+
+```bash
+export WHOATE_URL=http://localhost:3000
+npm run dev  # in whoate directory
+```
+
+Then use the skill:
    ```
    /whoate parse /path/to/receipt.jpg
    /whoate create "Alice"
@@ -49,7 +61,7 @@ openclaw skill add whoate https://raw.githubusercontent.com/CroissanStudioDev/wh
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `WHOATE_URL` | `http://localhost:3000` | WhoAte server URL |
+| `WHOATE_URL` | `https://whoate.app` | WhoAte server URL |
 
 ## Examples
 

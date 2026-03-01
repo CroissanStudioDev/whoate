@@ -2,6 +2,8 @@
 
 Split bills fairly with friends. Scan receipts, claim items, see who owes what.
 
+**🌐 Try it now: [whoate.app](https://whoate.app)**
+
 [![CI](https://github.com/CroissanStudioDev/whoate/actions/workflows/ci.yml/badge.svg)](https://github.com/CroissanStudioDev/whoate/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://github.com/CroissanStudioDev/whoate/pkgs/container/whoate)

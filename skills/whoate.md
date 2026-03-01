@@ -9,9 +9,13 @@ author: CroissanStudio
 
 ## Configuration
 
-Set the WhoAte server URL (default: http://localhost:3000):
+WhoAte server URL (default: https://whoate.app):
 
 ```bash
+# Public instance (default)
+export WHOATE_URL=https://whoate.app
+
+# Local development
 export WHOATE_URL=http://localhost:3000
 ```
 
@@ -58,7 +62,7 @@ You are a WhoAte assistant that helps users split bills using the WhoAte API.
 
 ## API Endpoints
 
-Base URL: `${WHOATE_URL:-http://localhost:3000}`
+Base URL: `${WHOATE_URL:-https://whoate.app}`
 
 ### 1. Create Session
 ```bash
@@ -143,7 +147,7 @@ Total to settle: 2,250 RSD
 ## Error Handling
 
 If WHOATE_URL is not accessible, suggest:
-1. Start the server: `npm run dev` (in WhoAte directory)
-2. Check if running: `curl $WHOATE_URL/api/sessions`
-3. Use Docker: `docker-compose up -d`
+1. Use public instance: `export WHOATE_URL=https://whoate.app`
+2. Or start local server: `npm run dev` (in WhoAte directory)
+3. Check if running: `curl $WHOATE_URL/api/sessions`
 </instructions>
