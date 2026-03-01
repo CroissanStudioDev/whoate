@@ -47,6 +47,7 @@ export interface Claim {
   participantId: string;
   type: "individual" | "shared";
   sharedWith?: string[];
+  claimedQuantity?: number; // How many of this item (e.g., 1 of 2 ramens)
 }
 
 // Debt calculation result

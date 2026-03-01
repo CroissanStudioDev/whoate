@@ -30,12 +30,19 @@ function calculateReceiptShares(
     const sharedClaims = item.claims.filter((c) => c.type === "shared");
 
     if (individualClaims.length > 0) {
-      // Split among individual claimants
-      const perPerson = item.totalPrice / individualClaims.length;
+      // Calculate total claimed quantity
+      const totalClaimedQty = individualClaims.reduce(
+        (sum, c) => sum + (c.claimedQuantity || item.quantity),
+        0
+      );
+
+      // Split based on claimed quantity
       individualClaims.forEach((claim) => {
+        const claimedQty = claim.claimedQuantity || item.quantity;
+        const share = (claimedQty / Math.max(totalClaimedQty, item.quantity)) * item.totalPrice;
         const current = shares.get(claim.participantId) || 0;
-        shares.set(claim.participantId, current + perPerson);
-        totalClaimedAmount += perPerson;
+        shares.set(claim.participantId, current + share);
+        totalClaimedAmount += share;
       });
     }
 

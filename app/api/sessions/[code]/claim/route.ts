@@ -9,7 +9,8 @@ interface RouteParams {
 export async function POST(request: Request, { params }: RouteParams) {
   try {
     const { code } = await params;
-    const { receiptId, itemId, participantId, type, sharedWith } = await request.json();
+    const { receiptId, itemId, participantId, type, sharedWith, claimedQuantity } =
+      await request.json();
 
     if (!receiptId || !itemId || !participantId || !type) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -39,6 +40,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       participantId,
       type: type as "individual" | "shared",
       sharedWith: type === "shared" ? sharedWith : undefined,
+      claimedQuantity: claimedQuantity || item.quantity, // Default to full quantity
     };
 
     if (existingClaimIndex >= 0) {

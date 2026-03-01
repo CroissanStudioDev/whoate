@@ -30,8 +30,10 @@ export default function SelectPage() {
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [showSharedDialog, setShowSharedDialog] = useState(false);
+  const [showQuantityDialog, setShowQuantityDialog] = useState(false);
   const [currentItem, setCurrentItem] = useState<ReceiptItem | null>(null);
   const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
+  const [selectedQuantity, setSelectedQuantity] = useState(1);
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -68,7 +70,11 @@ export default function SelectPage() {
     }
   }, [session, currentItemIndex, currentReceiptIndex, items.length, router, code]);
 
-  const claimItem = async (type: "individual" | "shared", sharedWith?: string[]) => {
+  const claimItem = async (
+    type: "individual" | "shared",
+    sharedWith?: string[],
+    claimedQuantity?: number
+  ) => {
     if (!participantId || !item || !receipt) return;
 
     try {
@@ -81,6 +87,7 @@ export default function SelectPage() {
           participantId,
           type,
           sharedWith,
+          claimedQuantity: claimedQuantity || item.quantity,
         }),
       });
 
@@ -95,12 +102,27 @@ export default function SelectPage() {
   };
 
   const handleSwipeLeft = () => nextItem();
-  const handleSwipeRight = () => claimItem("individual");
+  const handleSwipeRight = () => {
+    if (!item) return;
+    // If quantity > 1, show quantity dialog
+    if (item.quantity > 1) {
+      setCurrentItem(item);
+      setSelectedQuantity(item.quantity); // Default to all
+      setShowQuantityDialog(true);
+    } else {
+      claimItem("individual", undefined, 1);
+    }
+  };
   const handleSwipeUp = () => {
     if (!item) return;
     setCurrentItem(item);
     setSelectedParticipants(session?.participants.map((p) => p.id) || []);
     setShowSharedDialog(true);
+  };
+
+  const handleQuantityConfirm = () => {
+    claimItem("individual", undefined, selectedQuantity);
+    setShowQuantityDialog(false);
   };
 
   const handleShareConfirm = () => {
@@ -154,7 +176,12 @@ export default function SelectPage() {
         const myClaim = i.claims.find((c) => c.participantId === participantId);
         if (!myClaim) return itemSum;
         if (myClaim.type === "individual") {
-          return itemSum + i.totalPrice / i.claims.filter((c) => c.type === "individual").length;
+          // Calculate based on claimed quantity
+          const totalClaimedQty = i.claims
+            .filter((c) => c.type === "individual")
+            .reduce((q, c) => q + (c.claimedQuantity || i.quantity), 0);
+          const myQty = myClaim.claimedQuantity || i.quantity;
+          return itemSum + (myQty / Math.max(totalClaimedQty, i.quantity)) * i.totalPrice;
         }
         if (myClaim.type === "shared" && myClaim.sharedWith) {
           return itemSum + i.totalPrice / myClaim.sharedWith.length;
@@ -236,15 +263,28 @@ export default function SelectPage() {
 
             return (
               <div key={r.id} className="space-y-2">
-                {myItems.map((i) => (
-                  <div
-                    key={i.id}
-                    className="flex justify-between p-3 rounded-lg border border-neutral-200"
-                  >
-                    <span>{i.name}</span>
-                    <span className="font-mono">{formatCurrency(i.totalPrice, r.currency)}</span>
-                  </div>
-                ))}
+                {myItems.map((i) => {
+                  const myClaim = i.claims.find((c) => c.participantId === participantId);
+                  const myQty = myClaim?.claimedQuantity || i.quantity;
+                  const showQty = i.quantity > 1;
+                  const myPrice = showQty ? i.unitPrice * myQty : i.totalPrice;
+                  return (
+                    <div
+                      key={i.id}
+                      className="flex justify-between p-3 rounded-lg border border-neutral-200"
+                    >
+                      <span>
+                        {i.name}
+                        {showQty && (
+                          <span className="text-neutral-400 ml-1">
+                            ({myQty} of {i.quantity})
+                          </span>
+                        )}
+                      </span>
+                      <span className="font-mono">{formatCurrency(myPrice, r.currency)}</span>
+                    </div>
+                  );
+                })}
               </div>
             );
           })}
@@ -253,6 +293,56 @@ export default function SelectPage() {
           )}
         </div>
       </div>
+
+      {/* Quantity dialog */}
+      <Dialog open={showQuantityDialog} onOpenChange={setShowQuantityDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>
+              {currentItem?.name} ({currentItem?.quantity}x)
+            </DialogTitle>
+            <DialogDescription>How many are yours?</DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 py-4">
+            {currentItem &&
+              Array.from({ length: currentItem.quantity }, (_, i) => i + 1).map((qty) => (
+                <button
+                  type="button"
+                  key={qty}
+                  onClick={() => setSelectedQuantity(qty)}
+                  className={`flex-1 p-4 rounded-lg text-center font-mono text-lg transition-colors border ${
+                    selectedQuantity === qty
+                      ? "border-neutral-900 bg-neutral-900 text-white"
+                      : "border-neutral-200 hover:bg-neutral-50"
+                  }`}
+                >
+                  {qty}
+                </button>
+              ))}
+          </div>
+          {currentItem && receipt && (
+            <p className="text-center text-sm text-neutral-500">
+              {formatCurrency(currentItem.unitPrice * selectedQuantity, receipt.currency)} of{" "}
+              {formatCurrency(currentItem.totalPrice, receipt.currency)}
+            </p>
+          )}
+          <div className="flex gap-3 mt-2">
+            <Button
+              variant="outline"
+              className="flex-1 h-11 border-neutral-200 hover:bg-neutral-50 rounded-lg font-normal"
+              onClick={() => setShowQuantityDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="flex-1 h-11 bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg font-normal"
+              onClick={handleQuantityConfirm}
+            >
+              Claim {selectedQuantity}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Shared dialog */}
       <Dialog open={showSharedDialog} onOpenChange={setShowSharedDialog}>
