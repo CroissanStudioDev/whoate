@@ -184,7 +184,7 @@ POST /api/sessions/:code/join
 
 ## Receipts
 
-### Upload Receipt
+### Upload Receipt (OCR)
 
 Uploads a receipt image for OCR processing. The AI extracts all items automatically.
 
@@ -197,7 +197,8 @@ POST /api/sessions/:code/receipts
 ```json
 {
   "imageBase64": "data:image/jpeg;base64,/9j/4AAQSkZJRg...",
-  "participantId": "p_abc123"
+  "participantId": "p_abc123",
+  "paidBy": "p_abc123"
 }
 ```
 
@@ -205,6 +206,7 @@ POST /api/sessions/:code/receipts
 |-------|------|----------|-------------|
 | `imageBase64` | string | Yes | Base64-encoded image (JPEG, PNG, WebP) |
 | `participantId` | string | Yes | ID of the participant uploading |
+| `paidBy` | string | No | ID of participant who paid (defaults to uploader) |
 
 **Response:** `201 Created`
 
@@ -213,23 +215,24 @@ POST /api/sessions/:code/receipts
   "receipt": {
     "id": "r_xyz789",
     "uploadedBy": "p_abc123",
-    "uploadedAt": "2026-03-01T12:10:00.000Z",
+    "paidBy": "p_abc123",
+    "processedAt": "2026-03-01T12:10:00.000Z",
     "currency": "RSD",
     "items": [
       {
         "id": "i_001",
         "name": "Avocado toast",
         "quantity": 2,
-        "unit_price": 895,
-        "total_price": 1790,
+        "unitPrice": 895,
+        "totalPrice": 1790,
         "claims": []
       },
       {
         "id": "i_002",
         "name": "Cappuccino",
         "quantity": 1,
-        "unit_price": 445,
-        "total_price": 445,
+        "unitPrice": 445,
+        "totalPrice": 445,
         "claims": []
       }
     ],
@@ -258,6 +261,116 @@ IMAGE=$(base64 -i receipt.jpg)
 curl -X POST https://whoate.app/api/sessions/ABC123/receipts \
   -H "Content-Type: application/json" \
   -d "{\"imageBase64\": \"data:image/jpeg;base64,$IMAGE\", \"participantId\": \"p_abc123\"}"
+```
+
+---
+
+### Create Receipt Manually
+
+Creates a receipt by manually entering items (no photo required).
+
+```http
+POST /api/sessions/:code/receipts
+```
+
+**Request Body:**
+
+```json
+{
+  "manual": true,
+  "participantId": "p_abc123",
+  "paidBy": "p_abc123",
+  "currency": "USD",
+  "items": [
+    { "name": "Pizza Margherita", "quantity": 1, "unitPrice": 15.99 },
+    { "name": "Beer", "quantity": 2, "unitPrice": 6.50 },
+    { "name": "Tiramisu", "quantity": 1, "unitPrice": 8.00 }
+  ],
+  "tax": 3.50,
+  "tip": 5.00
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `manual` | boolean | Yes | Must be `true` for manual entry |
+| `participantId` | string | Yes | ID of the participant creating |
+| `paidBy` | string | No | ID of participant who paid (defaults to creator) |
+| `currency` | string | No | ISO 4217 currency code (default: "USD") |
+| `items` | array | Yes | Array of items (at least one required) |
+| `items[].name` | string | Yes | Item name |
+| `items[].quantity` | number | No | Quantity (default: 1) |
+| `items[].unitPrice` | number | Yes | Price per unit |
+| `tax` | number | No | Tax amount (default: 0) |
+| `tip` | number | No | Tip amount (default: 0) |
+
+**Response:** `201 Created`
+
+```json
+{
+  "receipt": {
+    "id": "r_manual123",
+    "uploadedBy": "p_abc123",
+    "paidBy": "p_abc123",
+    "processedAt": "2026-03-01T12:15:00.000Z",
+    "currency": "USD",
+    "items": [
+      {
+        "id": "i_001",
+        "name": "Pizza Margherita",
+        "quantity": 1,
+        "unitPrice": 15.99,
+        "totalPrice": 15.99,
+        "claims": []
+      },
+      {
+        "id": "i_002",
+        "name": "Beer",
+        "quantity": 2,
+        "unitPrice": 6.50,
+        "totalPrice": 13.00,
+        "claims": []
+      },
+      {
+        "id": "i_003",
+        "name": "Tiramisu",
+        "quantity": 1,
+        "unitPrice": 8.00,
+        "totalPrice": 8.00,
+        "claims": []
+      }
+    ],
+    "subtotal": 36.99,
+    "tax": 3.50,
+    "tip": 5.00,
+    "total": 45.49
+  }
+}
+```
+
+**Errors:**
+
+| Status | Description |
+|--------|-------------|
+| `400` | Missing required fields or empty items |
+| `404` | Session not found |
+
+**Example:**
+
+```bash
+curl -X POST https://whoate.app/api/sessions/ABC123/receipts \
+  -H "Content-Type: application/json" \
+  -d '{
+    "manual": true,
+    "participantId": "p_abc123",
+    "currency": "EUR",
+    "items": [
+      { "name": "Pasta", "quantity": 2, "unitPrice": 12.50 },
+      { "name": "Wine", "quantity": 1, "unitPrice": 24.00 }
+    ],
+    "tax": 0,
+    "tip": 10.00
+  }'
 ```
 
 ---
@@ -544,4 +657,5 @@ Future versions will support webhooks for:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.1.0 | Mar 2026 | Add manual receipt entry (without photo) |
 | 1.0.0 | Mar 2026 | Initial API release |

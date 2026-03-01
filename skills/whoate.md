@@ -90,6 +90,24 @@ curl -X POST "$WHOATE_URL/api/sessions/CODE/receipts" \
 ```
 Returns: `{ "receipt": { "items": [...], "total": 6455, "currency": "RSD" } }`
 
+### 3b. Create Receipt Manually (without photo)
+```bash
+curl -X POST "$WHOATE_URL/api/sessions/CODE/receipts" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "manual": true,
+    "participantId": "PARTICIPANT_ID",
+    "currency": "USD",
+    "items": [
+      { "name": "Pizza", "quantity": 1, "unitPrice": 15.99 },
+      { "name": "Beer", "quantity": 2, "unitPrice": 6.50 }
+    ],
+    "tax": 2.50,
+    "tip": 5.00
+  }'
+```
+Returns: `{ "receipt": { "items": [...], "total": 35.49, "currency": "USD" } }`
+
 ### 4. Get Session
 ```bash
 curl "$WHOATE_URL/api/sessions/CODE"
@@ -111,7 +129,8 @@ curl -X POST "$WHOATE_URL/api/sessions/CODE/claim" \
 ## Task Handling
 
 When user says:
-- **"parse receipt"** or provides an image path → Use the Upload Receipt endpoint
+- **"parse receipt"** or provides an image path → Use the Upload Receipt endpoint (with OCR)
+- **"add items manually"** or **"create receipt"** → Use the Manual Receipt endpoint
 - **"create session"** → Use Create Session endpoint
 - **"join CODE"** → Use Join Session endpoint
 - **"summary"** or **"who owes what"** → Use Get Debt Summary endpoint
