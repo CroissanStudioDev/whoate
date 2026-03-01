@@ -17,7 +17,7 @@ function getOpenAI(): OpenAI {
 }
 
 function getModel(): string {
-  return process.env.OPENAI_MODEL || "google/gemini-3.1-flash-image-preview";
+  return process.env.OPENAI_MODEL || "google/gemini-2.5-flash";
 }
 
 const SYSTEM_PROMPT = `You are a receipt parser. Extract all line items from the receipt image.
