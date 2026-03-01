@@ -1,6 +1,7 @@
 "use client";
 
-import { Calculator, Loader2, Receipt, Users } from "lucide-react";
+import { Bot, Calculator, Code2, Github, Loader2, Receipt, Users, Zap } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -83,39 +84,48 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
-      <div className="container max-w-lg mx-auto px-4 py-12">
+      <div className="container max-w-lg mx-auto px-4 py-8">
         {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-2">🍽️ WhoAte</h1>
-          <p className="text-muted-foreground">
-            Split bills fairly with friends. No math, no stress.
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold mb-3">🍽️ WhoAte</h1>
+          <p className="text-lg text-muted-foreground mb-2">
+            The smartest way to split bills
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Snap a receipt, claim your items, see who owes whom
           </p>
         </div>
 
-        {/* Features */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
-          <div className="text-center p-4">
-            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
-              <Receipt className="w-6 h-6 text-primary" />
+        {/* How it works */}
+        <div className="grid grid-cols-4 gap-2 mb-8">
+          <div className="text-center p-3">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
+              <Receipt className="w-5 h-5 text-primary" />
             </div>
-            <p className="text-sm text-muted-foreground">Scan receipts</p>
+            <p className="text-xs text-muted-foreground">1. Snap</p>
           </div>
-          <div className="text-center p-4">
-            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
-              <Users className="w-6 h-6 text-primary" />
+          <div className="text-center p-3">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
+              <Zap className="w-5 h-5 text-primary" />
             </div>
-            <p className="text-sm text-muted-foreground">Claim items</p>
+            <p className="text-xs text-muted-foreground">2. AI Magic</p>
           </div>
-          <div className="text-center p-4">
-            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
-              <Calculator className="w-6 h-6 text-primary" />
+          <div className="text-center p-3">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
+              <Users className="w-5 h-5 text-primary" />
             </div>
-            <p className="text-sm text-muted-foreground">See who owes</p>
+            <p className="text-xs text-muted-foreground">3. Swipe</p>
+          </div>
+          <div className="text-center p-3">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
+              <Calculator className="w-5 h-5 text-primary" />
+            </div>
+            <p className="text-xs text-muted-foreground">4. Done!</p>
           </div>
         </div>
 
         {/* Main Card */}
-        <Card>
+        <Card className="mb-6">
           <CardHeader>
             <CardTitle>Get Started</CardTitle>
             <CardDescription>Create a new session or join an existing one</CardDescription>
@@ -192,10 +202,77 @@ export default function Home() {
           </CardContent>
         </Card>
 
+        {/* Features highlight */}
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          <div className="bg-muted/50 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Zap className="w-4 h-4 text-yellow-500" />
+              <span className="font-medium text-sm">AI-Powered</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Extracts items from any receipt in 100+ languages
+            </p>
+          </div>
+          <div className="bg-muted/50 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Users className="w-4 h-4 text-blue-500" />
+              <span className="font-medium text-sm">No Sign-up</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Just share a code with friends
+            </p>
+          </div>
+        </div>
+
+        {/* Developer section */}
+        <Card className="bg-muted/30 border-dashed">
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Code2 className="w-4 h-4" />
+              <span className="font-medium text-sm">For Developers</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Link
+                href="https://github.com/CroissanStudioDev/whoate/blob/main/docs/API.md"
+                target="_blank"
+                className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Code2 className="w-3 h-3" />
+                REST API Docs
+              </Link>
+              <Link
+                href="https://github.com/CroissanStudioDev/whoate/blob/main/skills/whoate.md"
+                target="_blank"
+                className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Bot className="w-3 h-3" />
+                Claude Code Skill
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Footer */}
-        <p className="text-center text-sm text-muted-foreground mt-8">
-          Open source • No sign-up required • Sessions expire in 30 days
-        </p>
+        <div className="mt-8 text-center space-y-3">
+          <Link
+            href="https://github.com/CroissanStudioDev/whoate"
+            target="_blank"
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Github className="w-4 h-4" />
+            Open Source on GitHub
+          </Link>
+          <p className="text-xs text-muted-foreground">
+            Sessions expire in 30 days • Built by{" "}
+            <Link
+              href="https://croissanstudio.ru"
+              target="_blank"
+              className="underline hover:text-foreground"
+            >
+              CroissanStudio
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );
