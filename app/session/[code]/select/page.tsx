@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Check, Loader2, SkipForward, UserPlus, X } from "lucide-react";
+import { ArrowLeft, Check, Loader2, SkipForward, Undo2, UserPlus, X } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -17,6 +17,15 @@ import {
 import { useSessionStore, useUserStore } from "@/lib/store";
 import type { ReceiptItem } from "@/types";
 import { formatCurrency } from "@/types";
+
+type ActionType = "notMine" | "skip" | "claim";
+
+interface HistoryEntry {
+  itemId: string;
+  receiptId: string;
+  action: ActionType;
+  previousIndex: number;
+}
 
 export default function SelectPage() {
   const params = useParams();
@@ -36,6 +45,8 @@ export default function SelectPage() {
   const [skippedItems, setSkippedItems] = useState<Set<string>>(new Set());
   const [notMineItems, setNotMineItems] = useState<Set<string>>(new Set());
   const [isReviewingSkipped, setIsReviewingSkipped] = useState(false);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [isUndoing, setIsUndoing] = useState(false);
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -91,7 +102,17 @@ export default function SelectPage() {
   ]);
 
   const handleNotMine = () => {
-    if (!item) return;
+    if (!item || !receipt) return;
+    // Record history
+    setHistory((prev) => [
+      ...prev,
+      {
+        itemId: item.id,
+        receiptId: receipt.id,
+        action: "notMine",
+        previousIndex: currentItemIndex,
+      },
+    ]);
     setNotMineItems((prev) => new Set(prev).add(item.id));
     // Also remove from skipped if it was there
     setSkippedItems((prev) => {
@@ -103,11 +124,67 @@ export default function SelectPage() {
   };
 
   const handleSkip = () => {
-    if (!item) return;
+    if (!item || !receipt) return;
+    // Record history
+    setHistory((prev) => [
+      ...prev,
+      { itemId: item.id, receiptId: receipt.id, action: "skip", previousIndex: currentItemIndex },
+    ]);
     if (!isReviewingSkipped) {
       setSkippedItems((prev) => new Set(prev).add(item.id));
     }
     nextItem();
+  };
+
+  const handleUndo = async () => {
+    if (history.length === 0 || isUndoing) return;
+
+    const lastEntry = history[history.length - 1];
+    setIsUndoing(true);
+
+    try {
+      // Undo the action
+      if (lastEntry.action === "notMine") {
+        setNotMineItems((prev) => {
+          const next = new Set(prev);
+          next.delete(lastEntry.itemId);
+          return next;
+        });
+      } else if (lastEntry.action === "skip") {
+        setSkippedItems((prev) => {
+          const next = new Set(prev);
+          next.delete(lastEntry.itemId);
+          return next;
+        });
+      } else if (lastEntry.action === "claim") {
+        // Unclaim via API
+        const res = await fetch(`/api/sessions/${code}/claim`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            receiptId: lastEntry.receiptId,
+            itemId: lastEntry.itemId,
+            participantId,
+          }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setSession(data.session);
+        }
+      }
+
+      // Remove from history
+      setHistory((prev) => prev.slice(0, -1));
+
+      // Go back to previous index
+      setCurrentItemIndex(lastEntry.previousIndex);
+
+      toast("Undone", { icon: "↩️" });
+    } catch {
+      toast.error("Failed to undo");
+    } finally {
+      setIsUndoing(false);
+    }
   };
 
   const claimItem = async (
@@ -134,6 +211,16 @@ export default function SelectPage() {
       if (res.ok) {
         const data = await res.json();
         setSession(data.session);
+        // Record history
+        setHistory((prev) => [
+          ...prev,
+          {
+            itemId: item.id,
+            receiptId: receipt.id,
+            action: "claim",
+            previousIndex: currentItemIndex,
+          },
+        ]);
         nextItem();
       }
     } catch {
@@ -283,6 +370,20 @@ export default function SelectPage() {
             />
             {/* Action buttons */}
             <div className="flex justify-center items-center gap-3 mt-6">
+              {/* Undo button */}
+              <button
+                type="button"
+                onClick={handleUndo}
+                disabled={history.length === 0 || isUndoing}
+                className={`w-10 h-10 rounded-full border-2 flex items-center justify-center transition-colors ${
+                  history.length === 0
+                    ? "border-neutral-100 text-neutral-200 cursor-not-allowed"
+                    : "border-neutral-200 text-neutral-400 hover:border-neutral-400 hover:text-neutral-600"
+                }`}
+                title="Undo last action"
+              >
+                <Undo2 className="w-4 h-4" />
+              </button>
               <button
                 type="button"
                 onClick={handleNotMine}
@@ -318,6 +419,7 @@ export default function SelectPage() {
             </div>
             {/* Button labels */}
             <div className="flex justify-center items-center gap-3 mt-2 text-xs text-neutral-400">
+              <span className="w-10 text-center">Undo</span>
               <span className="w-12 text-center">Not mine</span>
               <span className="w-12 text-center">Skip</span>
               <span className="w-14 text-center">Mine</span>
