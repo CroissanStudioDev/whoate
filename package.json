@@ -1,6 +1,6 @@
 {
   "name": "whoate",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "private": false,
   "description": "Split bills fairly with friends. Scan receipts, claim items, see who owes what.",
   "author": "CroissanStudio <serge@croissanstudio.ru>",
