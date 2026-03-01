@@ -4,8 +4,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Plus Jakarta Sans - Friendly SaaS font */
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+/* Plus Jakarta Sans loaded via next/font in layout.tsx */
 
 @theme inline {
   --color-background: var(--background);
@@ -165,7 +164,6 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   }
 
   /* Smooth scrolling */
