@@ -54,6 +54,8 @@ npm run dev
 | Variable | Required | Default | Description |
 | --- | --- | --- | --- |
 | `OPENAI_API_KEY` | Yes | - | Your OpenAI API key for receipt OCR |
+| `OPENAI_BASE_URL` | No | - | Custom base URL for OpenAI-compatible APIs (Azure, Ollama, etc.) |
+| `OPENAI_MODEL` | No | gpt-4o | Model to use for OCR (must support vision) |
 | `REDIS_URL` | No | - | Redis connection URL. Uses in-memory store if not set |
 | `SESSION_TTL` | No | 2592000 | Session expiry in seconds (default: 30 days) |
 

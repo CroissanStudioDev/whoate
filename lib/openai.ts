@@ -10,9 +10,14 @@ function getOpenAI(): OpenAI {
     }
     openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
+      baseURL: process.env.OPENAI_BASE_URL || undefined,
     });
   }
   return openai;
+}
+
+function getModel(): string {
+  return process.env.OPENAI_MODEL || "gpt-4o";
 }
 
 const SYSTEM_PROMPT = `You are a receipt parser. Extract all line items from the receipt image.
@@ -48,7 +53,7 @@ Rules:
 export async function parseReceipt(imageBase64: string): Promise<OCRResult> {
   const client = getOpenAI();
   const response = await client.chat.completions.create({
-    model: "gpt-4o",
+    model: getModel(),
     messages: [
       {
         role: "system",
