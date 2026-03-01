@@ -3,7 +3,7 @@
 <skill>
 name: whoate
 description: Parse receipts and split bills with WhoAte API
-version: 1.0.0
+version: 1.2.0
 author: CroissanStudio
 </skill>
 
@@ -108,33 +108,74 @@ curl -X POST "$WHOATE_URL/api/sessions/CODE/receipts" \
 ```
 Returns: `{ "receipt": { "items": [...], "total": 35.49, "currency": "USD" } }`
 
-### 4. Get Session
+### 4. Edit Receipt Items
+```bash
+curl -X PATCH "$WHOATE_URL/api/sessions/CODE/receipts" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "receiptId": "RECEIPT_ID",
+    "participantId": "PARTICIPANT_ID",
+    "updates": {
+      "items": [
+        { "id": "ITEM_ID", "name": "Updated Name", "quantity": 2, "unitPrice": 10.00, "totalPrice": 20.00 }
+      ]
+    }
+  }'
+```
+
+### 5. Delete Receipt
+```bash
+curl -X DELETE "$WHOATE_URL/api/sessions/CODE/receipts/RECEIPT_ID" \
+  -H "Content-Type: application/json" \
+  -d '{"participantId": "PARTICIPANT_ID"}'
+```
+
+### 6. Get Session
 ```bash
 curl "$WHOATE_URL/api/sessions/CODE"
 ```
 
-### 5. Get Debt Summary
+### 7. Get Debt Summary
 ```bash
 curl "$WHOATE_URL/api/sessions/CODE/summary"
 ```
 Returns: `{ "transactions": [{ "from": "Alice", "to": "Bob", "amount": 1500 }] }`
 
-### 6. Claim Item
+### 8. Claim Item
 ```bash
 curl -X POST "$WHOATE_URL/api/sessions/CODE/claim" \
   -H "Content-Type: application/json" \
-  -d '{"itemId": "ITEM_ID", "participantId": "PARTICIPANT_ID", "share": 1.0}'
+  -d '{
+    "receiptId": "RECEIPT_ID",
+    "itemId": "ITEM_ID",
+    "participantId": "PARTICIPANT_ID",
+    "type": "individual",
+    "claimedQuantity": 1
+  }'
 ```
+
+**Claim types:**
+- `individual` — claim for yourself (use `claimedQuantity` for items with qty > 1)
+- `shared` — split with others (use `sharedWith: ["id1", "id2"]`)
+
+### 9. Health Check
+```bash
+curl "$WHOATE_URL/api/health"
+```
+Returns: `{ "status": "healthy", "uptime": 123.45 }`
 
 ## Task Handling
 
 When user says:
 - **"parse receipt"** or provides an image path → Use the Upload Receipt endpoint (with OCR)
 - **"add items manually"** or **"create receipt"** → Use the Manual Receipt endpoint
+- **"edit item"** or **"change price"** → Use the Edit Receipt endpoint
+- **"delete receipt"** → Use the Delete Receipt endpoint
 - **"create session"** → Use Create Session endpoint
 - **"join CODE"** → Use Join Session endpoint
 - **"summary"** or **"who owes what"** → Use Get Debt Summary endpoint
 - **"claim ITEM"** → Use Claim Item endpoint
+- **"claim 1 of 2"** → Use Claim Item with `claimedQuantity: 1`
 
 ## Response Format
 
@@ -163,10 +204,15 @@ Charlie → Bob: 750 RSD
 Total to settle: 2,250 RSD
 ```
 
+### For quantity claims:
+```
+✅ Claimed 1 of 2 Ramen (890 RSD)
+```
+
 ## Error Handling
 
 If WHOATE_URL is not accessible, suggest:
 1. Use public instance: `export WHOATE_URL=https://whoate.app`
 2. Or start local server: `npm run dev` (in WhoAte directory)
-3. Check if running: `curl $WHOATE_URL/api/sessions`
+3. Check if running: `curl $WHOATE_URL/api/health`
 </instructions>

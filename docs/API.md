@@ -6,6 +6,29 @@ All endpoints accept and return JSON. No authentication required.
 
 ---
 
+## Health Check
+
+### Get Health Status
+
+Check if the API is running.
+
+```http
+GET /api/health
+```
+
+**Response:** `200 OK`
+
+```json
+{
+  "status": "healthy",
+  "timestamp": "2026-03-01T12:00:00.000Z",
+  "uptime": 3600.5,
+  "version": "1.2.0"
+}
+```
+
+---
+
 ## Sessions
 
 ### Create Session
@@ -92,11 +115,11 @@ GET /api/sessions/:code
           "id": "i_001",
           "name": "Avocado toast",
           "quantity": 2,
-          "unit_price": 895,
-          "total_price": 1790,
+          "unitPrice": 895,
+          "totalPrice": 1790,
           "claims": [
-            { "participantId": "p_abc123", "share": 0.5 },
-            { "participantId": "p_def456", "share": 0.5 }
+            { "participantId": "p_abc123", "type": "individual", "claimedQuantity": 1 },
+            { "participantId": "p_def456", "type": "individual", "claimedQuantity": 1 }
           ]
         }
       ],
@@ -377,7 +400,7 @@ curl -X POST https://whoate.app/api/sessions/ABC123/receipts \
 
 ### Edit Receipt
 
-Manually edit receipt items (add, update, or delete).
+Update receipt items (name, quantity, price). Only the uploader can edit.
 
 ```http
 PATCH /api/sessions/:code/receipts
@@ -388,20 +411,33 @@ PATCH /api/sessions/:code/receipts
 ```json
 {
   "receiptId": "r_xyz789",
-  "items": [
-    {
-      "id": "i_001",
-      "name": "Avocado toast (updated)",
-      "quantity": 2,
-      "unit_price": 900,
-      "total_price": 1800
-    }
-  ],
-  "tax": 1100,
-  "tip": 500,
-  "total": 7000
+  "participantId": "p_abc123",
+  "updates": {
+    "items": [
+      {
+        "id": "i_001",
+        "name": "Avocado toast (updated)",
+        "quantity": 2,
+        "unitPrice": 900,
+        "totalPrice": 1800,
+        "claims": []
+      }
+    ],
+    "tax": 1100,
+    "tip": 500
+  }
 }
 ```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `receiptId` | string | Yes | ID of the receipt to edit |
+| `participantId` | string | Yes | ID of the participant (must be uploader) |
+| `updates.items` | array | No | Updated items array |
+| `updates.tax` | number | No | Updated tax amount |
+| `updates.tip` | number | No | Updated tip amount |
+| `updates.currency` | string | No | Updated currency code |
+| `updates.paidBy` | string | No | Updated payer ID |
 
 **Response:** `200 OK`
 
@@ -410,9 +446,77 @@ PATCH /api/sessions/:code/receipts
   "receipt": {
     "id": "r_xyz789",
     "items": [...],
-    "total": 7000
-  }
+    "subtotal": 1800,
+    "tax": 1100,
+    "tip": 500,
+    "total": 3400
+  },
+  "session": {...}
 }
+```
+
+**Errors:**
+
+| Status | Description |
+|--------|-------------|
+| `403` | Only the uploader can edit this receipt |
+| `404` | Receipt or session not found |
+
+**Example:**
+
+```bash
+curl -X PATCH https://whoate.app/api/sessions/ABC123/receipts \
+  -H "Content-Type: application/json" \
+  -d '{
+    "receiptId": "r_xyz789",
+    "participantId": "p_abc123",
+    "updates": {
+      "items": [
+        { "id": "i_001", "name": "Ramen", "quantity": 2, "unitPrice": 890, "totalPrice": 1780, "claims": [] }
+      ]
+    }
+  }'
+```
+
+---
+
+### Delete Receipt
+
+Delete a receipt. Only the uploader can delete.
+
+```http
+DELETE /api/sessions/:code/receipts/:receiptId
+```
+
+**Request Body:**
+
+```json
+{
+  "participantId": "p_abc123"
+}
+```
+
+**Response:** `200 OK`
+
+```json
+{
+  "session": {...}
+}
+```
+
+**Errors:**
+
+| Status | Description |
+|--------|-------------|
+| `403` | Only the uploader can delete this receipt |
+| `404` | Receipt or session not found |
+
+**Example:**
+
+```bash
+curl -X DELETE https://whoate.app/api/sessions/ABC123/receipts/r_xyz789 \
+  -H "Content-Type: application/json" \
+  -d '{"participantId": "p_abc123"}'
 ```
 
 ---
@@ -421,7 +525,7 @@ PATCH /api/sessions/:code/receipts
 
 ### Claim Item
 
-Claim an item (or a share of it) for a participant.
+Claim an item (or part of it) for a participant.
 
 ```http
 POST /api/sessions/:code/claim
@@ -431,22 +535,35 @@ POST /api/sessions/:code/claim
 
 ```json
 {
+  "receiptId": "r_xyz789",
   "itemId": "i_001",
   "participantId": "p_abc123",
-  "share": 1.0
+  "type": "individual",
+  "claimedQuantity": 1
 }
 ```
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
+| `receiptId` | string | Yes | ID of the receipt |
 | `itemId` | string | Yes | ID of the item to claim |
 | `participantId` | string | Yes | ID of the participant claiming |
-| `share` | number | No | Share of the item (0.0-1.0, default: 1.0) |
+| `type` | string | Yes | `"individual"` or `"shared"` |
+| `claimedQuantity` | number | No | How many to claim (for items with qty > 1) |
+| `sharedWith` | array | No | Participant IDs to split with (when type = "shared") |
 
-**Share Examples:**
-- `1.0` — Full item (default)
-- `0.5` — Half (split between 2 people)
-- `0.33` — Third (split between 3 people)
+**Claim Types:**
+
+| Type | Description | Example |
+|------|-------------|---------|
+| `individual` | Claim for yourself | "I ate this ramen" |
+| `shared` | Split with others | "We shared this pizza" |
+
+**Quantity Examples:**
+
+For an item "Ramen × 2":
+- `claimedQuantity: 1` — Claim 1 of 2 (50% of price)
+- `claimedQuantity: 2` — Claim all 2 (100% of price)
 
 **Response:** `200 OK`
 
@@ -454,13 +571,15 @@ POST /api/sessions/:code/claim
 {
   "item": {
     "id": "i_001",
-    "name": "Avocado toast",
-    "total_price": 1790,
+    "name": "Ramen",
+    "quantity": 2,
+    "totalPrice": 1780,
     "claims": [
-      { "participantId": "p_abc123", "share": 0.5 },
-      { "participantId": "p_def456", "share": 0.5 }
+      { "participantId": "p_abc123", "type": "individual", "claimedQuantity": 1 },
+      { "participantId": "p_def456", "type": "individual", "claimedQuantity": 1 }
     ]
-  }
+  },
+  "session": {...}
 }
 ```
 
@@ -468,8 +587,34 @@ POST /api/sessions/:code/claim
 
 | Status | Description |
 |--------|-------------|
-| `400` | Total shares exceed 1.0 |
+| `400` | Missing required fields |
 | `404` | Item or session not found |
+
+**Example:**
+
+```bash
+# Claim 1 of 2 ramens
+curl -X POST https://whoate.app/api/sessions/ABC123/claim \
+  -H "Content-Type: application/json" \
+  -d '{
+    "receiptId": "r_xyz789",
+    "itemId": "i_001",
+    "participantId": "p_abc123",
+    "type": "individual",
+    "claimedQuantity": 1
+  }'
+
+# Share a pizza with 3 people
+curl -X POST https://whoate.app/api/sessions/ABC123/claim \
+  -H "Content-Type: application/json" \
+  -d '{
+    "receiptId": "r_xyz789",
+    "itemId": "i_002",
+    "participantId": "p_abc123",
+    "type": "shared",
+    "sharedWith": ["p_abc123", "p_def456", "p_ghi789"]
+  }'
+```
 
 ---
 
@@ -485,6 +630,7 @@ DELETE /api/sessions/:code/claim
 
 ```json
 {
+  "receiptId": "r_xyz789",
   "itemId": "i_001",
   "participantId": "p_abc123"
 }
@@ -494,7 +640,8 @@ DELETE /api/sessions/:code/claim
 
 ```json
 {
-  "success": true
+  "session": {...},
+  "item": {...}
 }
 ```
 
@@ -581,6 +728,7 @@ All errors follow this format:
 | `200` | Success |
 | `201` | Created |
 | `400` | Bad request (invalid input) |
+| `403` | Forbidden (not authorized) |
 | `404` | Not found |
 | `500` | Server error |
 
@@ -639,6 +787,19 @@ const receipt = await fetch(`${WHOATE_URL}/api/sessions/${session.code}/receipts
 }).then(r => r.json());
 
 console.log(`Found ${receipt.receipt.items.length} items`);
+
+// Claim 1 of 2 items
+await fetch(`${WHOATE_URL}/api/sessions/${session.code}/claim`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    receiptId: receipt.receipt.id,
+    itemId: receipt.receipt.items[0].id,
+    participantId: session.participants[0].id,
+    type: 'individual',
+    claimedQuantity: 1
+  })
+});
 ```
 
 ---
@@ -657,5 +818,6 @@ Future versions will support webhooks for:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.2.0 | Mar 2026 | Add quantity selection for claims, receipt editing, receipt deletion, health endpoint |
 | 1.1.0 | Mar 2026 | Add manual receipt entry (without photo) |
 | 1.0.0 | Mar 2026 | Initial API release |
