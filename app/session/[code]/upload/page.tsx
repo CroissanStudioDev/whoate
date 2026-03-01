@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Check, Info, Loader2, Plus, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, Check, Info, Loader2, Pencil, Plus, Trash2, Upload } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
@@ -49,6 +49,10 @@ export default function UploadPage() {
   const [tip, setTip] = useState("");
   const [taxIncluded, setTaxIncluded] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedItems, setEditedItems] = useState<ReceiptItem[]>([]);
+  const [editedTax, setEditedTax] = useState("");
+  const [editedTip, setEditedTip] = useState("");
 
   const handleUpload = useCallback(
     async (base64: string) => {
@@ -236,6 +240,93 @@ export default function UploadPage() {
       }
     } catch {
       toast.error("Failed to update");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const startEditing = () => {
+    if (!receipt) return;
+    setEditedItems([...receipt.items]);
+    setEditedTax(receipt.tax.toString());
+    setEditedTip(receipt.tip.toString());
+    setIsEditing(true);
+  };
+
+  const cancelEditing = () => {
+    setIsEditing(false);
+    setEditedItems([]);
+  };
+
+  const updateEditedItem = (id: string, field: keyof ReceiptItem, value: string | number) => {
+    setEditedItems((items) =>
+      items.map((item) => {
+        if (item.id !== id) return item;
+        const updated = { ...item, [field]: value };
+        if (field === "quantity" || field === "unitPrice") {
+          updated.totalPrice = updated.quantity * updated.unitPrice;
+        }
+        return updated;
+      })
+    );
+  };
+
+  const deleteEditedItem = (id: string) => {
+    if (editedItems.length > 1) {
+      setEditedItems((items) => items.filter((item) => item.id !== id));
+    }
+  };
+
+  const addEditedItem = () => {
+    const newItem: ReceiptItem = {
+      id: `new-${Date.now()}`,
+      name: "",
+      quantity: 1,
+      unitPrice: 0,
+      totalPrice: 0,
+      claims: [],
+    };
+    setEditedItems([...editedItems, newItem]);
+  };
+
+  const saveEdits = async () => {
+    if (!receipt || !participantId) return;
+
+    const validItems = editedItems.filter((item) => item.name.trim());
+    if (validItems.length === 0) {
+      toast.error("Add at least one item");
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      const res = await fetch(`/api/sessions/${code}/receipts`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          receiptId: receipt.id,
+          participantId,
+          updates: {
+            items: validItems.map((item) => ({
+              ...item,
+              totalPrice: item.quantity * item.unitPrice,
+            })),
+            tax: Number.parseFloat(editedTax) || 0,
+            tip: Number.parseFloat(editedTip) || 0,
+          },
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setReceipt(data.receipt);
+        setIsEditing(false);
+        toast.success("Receipt updated!");
+      } else {
+        throw new Error("Failed to update");
+      }
+    } catch {
+      toast.error("Failed to save changes");
     } finally {
       setIsUpdating(false);
     }
@@ -471,11 +562,21 @@ export default function UploadPage() {
           )}
 
           {/* Receipt preview */}
-          {receipt && (
+          {receipt && !isEditing && (
             <div className="space-y-6">
-              <div className="flex items-center gap-2 text-neutral-600">
-                <Check className="w-5 h-5" />
-                <span className="font-medium">{receipt.items.length} items</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-neutral-600">
+                  <Check className="w-5 h-5" />
+                  <span className="font-medium">{receipt.items.length} items</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={startEditing}
+                  className="flex items-center gap-1 text-sm text-neutral-500 hover:text-neutral-700"
+                >
+                  <Pencil className="w-4 h-4" />
+                  Edit
+                </button>
               </div>
 
               {/* Items list */}
@@ -561,6 +662,133 @@ export default function UploadPage() {
                 className="w-full h-11 bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg font-normal"
               >
                 Continue
+              </Button>
+            </div>
+          )}
+
+          {/* Edit mode */}
+          {receipt && isEditing && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <span className="font-medium">Edit receipt</span>
+                <button
+                  type="button"
+                  onClick={cancelEditing}
+                  className="text-sm text-neutral-500 hover:text-neutral-700"
+                >
+                  Cancel
+                </button>
+              </div>
+
+              {/* Editable items */}
+              <div className="space-y-3">
+                <span className="text-sm text-neutral-500 block">Items</span>
+                {editedItems.map((item) => (
+                  <div key={item.id} className="flex gap-2">
+                    <Input
+                      placeholder="Item name"
+                      value={item.name}
+                      onChange={(e) => updateEditedItem(item.id, "name", e.target.value)}
+                      className="flex-1 h-11 border-neutral-200 rounded-lg"
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Qty"
+                      value={item.quantity}
+                      onChange={(e) =>
+                        updateEditedItem(
+                          item.id,
+                          "quantity",
+                          Number.parseInt(e.target.value, 10) || 1
+                        )
+                      }
+                      className="w-16 h-11 border-neutral-200 rounded-lg text-center"
+                      min={1}
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Price"
+                      value={item.unitPrice || ""}
+                      onChange={(e) =>
+                        updateEditedItem(
+                          item.id,
+                          "unitPrice",
+                          Number.parseFloat(e.target.value) || 0
+                        )
+                      }
+                      className="w-24 h-11 border-neutral-200 rounded-lg"
+                      step="0.01"
+                      min="0"
+                    />
+                    {editedItems.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => deleteEditedItem(item.id)}
+                        className="p-2 text-neutral-400 hover:text-red-500"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={addEditedItem}
+                  className="flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-700"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add item
+                </button>
+              </div>
+
+              {/* Tax & Tip */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <span className="text-sm text-neutral-500 block">Tax</span>
+                  <Input
+                    type="number"
+                    placeholder="0.00"
+                    value={editedTax}
+                    onChange={(e) => setEditedTax(e.target.value)}
+                    className="h-11 border-neutral-200 rounded-lg"
+                    step="0.01"
+                    min="0"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <span className="text-sm text-neutral-500 block">Tip</span>
+                  <Input
+                    type="number"
+                    placeholder="0.00"
+                    value={editedTip}
+                    onChange={(e) => setEditedTip(e.target.value)}
+                    className="h-11 border-neutral-200 rounded-lg"
+                    step="0.01"
+                    min="0"
+                  />
+                </div>
+              </div>
+
+              {/* Edited total preview */}
+              <div className="flex justify-between py-3 border-t border-neutral-200">
+                <span className="font-medium">Total</span>
+                <span className="font-mono text-lg">
+                  {formatCurrency(
+                    editedItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0) +
+                      (Number.parseFloat(editedTax) || 0) +
+                      (Number.parseFloat(editedTip) || 0),
+                    receipt.currency
+                  )}
+                </span>
+              </div>
+
+              {/* Save button */}
+              <Button
+                onClick={saveEdits}
+                disabled={isUpdating}
+                className="w-full h-11 bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg font-normal"
+              >
+                {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save changes"}
               </Button>
             </div>
           )}
