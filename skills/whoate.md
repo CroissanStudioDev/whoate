@@ -3,7 +3,7 @@
 <skill>
 name: whoate
 description: Parse receipts and split bills with WhoAte API
-version: 1.5.0
+version: 1.9.0
 author: CroissanStudio
 </skill>
 
