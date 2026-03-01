@@ -1,12 +1,29 @@
 "use client";
 
-import { Bot, Calculator, Code2, Github, Loader2, Receipt, Users, Zap } from "lucide-react";
+import {
+  ArrowRight,
+  Calculator,
+  Camera,
+  Code2,
+  Github,
+  Globe,
+  Loader2,
+  Sparkles,
+  Users,
+  Zap,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useUserStore } from "@/lib/store";
@@ -42,7 +59,9 @@ export default function Home() {
       setUser(userName.trim(), participantId);
       router.push(`/session/${session.code}`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to create session");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to create session"
+      );
     } finally {
       setIsCreating(false);
     }
@@ -76,61 +95,65 @@ export default function Home() {
       setUser(userName.trim(), participantId);
       router.push(`/session/${session.code}`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to join session");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to join session"
+      );
     } finally {
       setIsJoining(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
+    <div className="min-h-screen bg-gradient-to-b from-background via-background to-secondary/30">
       <div className="container max-w-lg mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-3">🍽️ WhoAte</h1>
-          <p className="text-lg text-muted-foreground mb-2">
-            The smartest way to split bills
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Snap a receipt, claim your items, see who owes whom
+        {/* Hero */}
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
+            <Sparkles className="w-4 h-4" />
+            AI-Powered Bill Splitting
+          </div>
+          <h1 className="text-4xl font-bold tracking-tight mb-3">
+            Split bills the
+            <span className="text-gradient"> smart way</span>
+          </h1>
+          <p className="text-muted-foreground text-lg">
+            Snap. Claim. Done. No more awkward math.
           </p>
         </div>
 
-        {/* How it works */}
-        <div className="grid grid-cols-4 gap-2 mb-8">
-          <div className="text-center p-3">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
-              <Receipt className="w-5 h-5 text-primary" />
-            </div>
-            <p className="text-xs text-muted-foreground">1. Snap</p>
-          </div>
-          <div className="text-center p-3">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
-              <Zap className="w-5 h-5 text-primary" />
-            </div>
-            <p className="text-xs text-muted-foreground">2. AI Magic</p>
-          </div>
-          <div className="text-center p-3">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
-              <Users className="w-5 h-5 text-primary" />
-            </div>
-            <p className="text-xs text-muted-foreground">3. Swipe</p>
-          </div>
-          <div className="text-center p-3">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
-              <Calculator className="w-5 h-5 text-primary" />
-            </div>
-            <p className="text-xs text-muted-foreground">4. Done!</p>
+        {/* How it works - Visual flow */}
+        <div className="relative mb-10">
+          <div className="absolute top-6 left-[12%] right-[12%] h-0.5 bg-gradient-to-r from-primary/20 via-primary/40 to-primary/20" />
+          <div className="grid grid-cols-4 gap-2 relative">
+            {[
+              { icon: Camera, label: "Snap", color: "text-blue-500" },
+              { icon: Zap, label: "AI Magic", color: "text-amber-500" },
+              { icon: Users, label: "Claim", color: "text-emerald-500" },
+              { icon: Calculator, label: "Settle", color: "text-rose-500" },
+            ].map((step, i) => (
+              <div key={step.label} className="text-center">
+                <div
+                  className={`w-12 h-12 rounded-xl bg-card border shadow-sm flex items-center justify-center mx-auto mb-2 transition-transform duration-200 hover:scale-105 ${step.color}`}
+                >
+                  <step.icon className="w-5 h-5" />
+                </div>
+                <p className="text-xs font-medium text-muted-foreground">
+                  {i + 1}. {step.label}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
 
         {/* Main Card */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Get Started</CardTitle>
-            <CardDescription>Create a new session or join an existing one</CardDescription>
+        <Card className="shadow-lg border-0 bg-card/80 backdrop-blur-sm mb-6">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl">Get Started</CardTitle>
+            <CardDescription>
+              Create a new session or join your friends
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-5">
             {/* Name Input */}
             <div className="space-y-2">
               <label htmlFor="userName" className="text-sm font-medium">
@@ -138,16 +161,16 @@ export default function Home() {
               </label>
               <Input
                 id="userName"
-                placeholder="Enter your name"
+                placeholder="How should we call you?"
                 value={userName}
                 onChange={(e) => setUserName(e.target.value)}
-                className="text-lg"
+                className="h-12 text-base"
               />
             </div>
 
             {/* Create Session */}
             <Button
-              className="w-full h-12 text-lg"
+              className="w-full h-12 text-base font-semibold btn-bounce"
               onClick={createSession}
               disabled={isCreating || isJoining}
             >
@@ -157,14 +180,17 @@ export default function Home() {
                   Creating...
                 </>
               ) : (
-                "Create New Session"
+                <>
+                  Create New Session
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </>
               )}
             </Button>
 
-            <div className="relative">
+            <div className="relative py-2">
               <Separator />
-              <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-sm text-muted-foreground">
-                or
+              <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-3 text-sm text-muted-foreground">
+                or join friends
               </span>
             </div>
 
@@ -176,16 +202,16 @@ export default function Home() {
                 </label>
                 <Input
                   id="sessionCode"
-                  placeholder="Enter 6-digit code"
+                  placeholder="ABC123"
                   value={joinCode}
                   onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                  className="text-center text-2xl font-mono tracking-widest"
+                  className="h-12 text-center text-2xl font-mono tracking-[0.3em] uppercase"
                   maxLength={6}
                 />
               </div>
               <Button
                 variant="outline"
-                className="w-full h-12"
+                className="w-full h-12 font-medium btn-bounce"
                 onClick={joinSession}
                 disabled={isCreating || isJoining}
               >
@@ -202,77 +228,82 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        {/* Features highlight */}
+        {/* Features */}
         <div className="grid grid-cols-2 gap-3 mb-6">
-          <div className="bg-muted/50 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <Zap className="w-4 h-4 text-yellow-500" />
-              <span className="font-medium text-sm">AI-Powered</span>
+          <div className="bg-card rounded-xl p-4 border shadow-sm card-interactive">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                <Zap className="w-4 h-4 text-amber-500" />
+              </div>
+              <span className="font-semibold text-sm">AI-Powered</span>
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground leading-relaxed">
               Extracts items from any receipt in 100+ languages
             </p>
           </div>
-          <div className="bg-muted/50 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <Users className="w-4 h-4 text-blue-500" />
-              <span className="font-medium text-sm">No Sign-up</span>
+          <div className="bg-card rounded-xl p-4 border shadow-sm card-interactive">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                <Globe className="w-4 h-4 text-emerald-500" />
+              </div>
+              <span className="font-semibold text-sm">No Sign-up</span>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Just share a code with friends
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Just share a 6-digit code. Works instantly.
             </p>
           </div>
         </div>
 
         {/* Developer section */}
-        <Card className="bg-muted/30 border-dashed">
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Code2 className="w-4 h-4" />
-              <span className="font-medium text-sm">For Developers</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Link
-                href="https://github.com/CroissanStudioDev/whoate/blob/main/docs/API.md"
-                target="_blank"
-                className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <Code2 className="w-3 h-3" />
-                REST API Docs
-              </Link>
-              <Link
-                href="https://github.com/CroissanStudioDev/whoate/blob/main/skills/whoate.md"
-                target="_blank"
-                className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <Bot className="w-3 h-3" />
-                Claude Code Skill
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="bg-muted/50 rounded-xl p-4 border border-dashed mb-8">
+          <div className="flex items-center gap-2 mb-3">
+            <Code2 className="w-4 h-4 text-muted-foreground" />
+            <span className="font-medium text-sm">For Developers</span>
+          </div>
+          <div className="flex flex-wrap gap-x-4 gap-y-2">
+            <Link
+              href="https://github.com/CroissanStudioDev/whoate/blob/main/docs/API.md"
+              target="_blank"
+              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+            >
+              <Code2 className="w-3 h-3" />
+              REST API
+            </Link>
+            <Link
+              href="https://github.com/CroissanStudioDev/whoate/blob/main/skills/whoate.md"
+              target="_blank"
+              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+            >
+              <Sparkles className="w-3 h-3" />
+              Claude Skill
+            </Link>
+            <Link
+              href="https://github.com/CroissanStudioDev/whoate"
+              target="_blank"
+              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+            >
+              <Github className="w-3 h-3" />
+              Source Code
+            </Link>
+          </div>
+        </div>
 
         {/* Footer */}
-        <div className="mt-8 text-center space-y-3">
-          <Link
-            href="https://github.com/CroissanStudioDev/whoate"
-            target="_blank"
-            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <Github className="w-4 h-4" />
-            Open Source on GitHub
-          </Link>
+        <footer className="text-center space-y-2">
           <p className="text-xs text-muted-foreground">
-            Sessions expire in 30 days • Built by{" "}
+            Open source • No tracking • Sessions expire in 30 days
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Built by{" "}
             <Link
               href="https://croissanstudio.ru"
               target="_blank"
-              className="underline hover:text-foreground"
+              className="font-medium hover:text-primary transition-colors"
             >
               CroissanStudio
             </Link>
           </p>
-        </div>
+        </footer>
       </div>
     </div>
   );

@@ -1,21 +1,25 @@
 {
-  "name": "WhoAte",
+  "name": "WhoAte - Split Bills Smartly",
   "short_name": "WhoAte",
-  "description": "Split bills with friends. No math, no stress.",
+  "description": "Snap a receipt, claim your items, see who owes whom. The smartest way to split bills.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#000000",
+  "background_color": "#F8FAFC",
+  "theme_color": "#2563EB",
+  "orientation": "portrait",
+  "categories": ["finance", "utilities", "productivity"],
   "icons": [
     {
       "src": "/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
