@@ -63,10 +63,12 @@ export default function SelectPage() {
     fetchSession();
   }, [code, setSession]);
 
-  // Get all items flattened with receipt info, excluding "not mine" items
+  // Get all items flattened with receipt info, excluding "not mine" items and already claimed items
   const allItems =
     session?.receipts.flatMap((r) =>
-      r.items.filter((i) => !notMineItems.has(i.id)).map((i) => ({ item: i, receipt: r }))
+      r.items
+        .filter((i) => !notMineItems.has(i.id) && i.claims.length === 0)
+        .map((i) => ({ item: i, receipt: r }))
     ) || [];
 
   // During initial pass, skip already skipped items; during review, only show skipped
@@ -77,8 +79,6 @@ export default function SelectPage() {
   const currentItemData = availableItems[currentItemIndex];
   const item = currentItemData?.item;
   const receipt = currentItemData?.receipt;
-
-  const alreadyClaimed = item?.claims.some((c) => c.participantId === participantId);
 
   const nextItem = useCallback(() => {
     if (currentItemIndex < availableItems.length - 1) {
@@ -356,11 +356,6 @@ export default function SelectPage() {
         {/* Current item */}
         {item && receipt ? (
           <div className="mb-8">
-            {alreadyClaimed && (
-              <div className="mb-4 p-3 rounded-lg border border-neutral-200 text-center text-sm text-neutral-500">
-                You already claimed this item
-              </div>
-            )}
             <SwipeCard
               item={item}
               currency={receipt.currency}
