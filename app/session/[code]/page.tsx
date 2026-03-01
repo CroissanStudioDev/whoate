@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Loader2 } from "lucide-react";
+import { ArrowRight, Loader2, Pencil } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -274,6 +274,15 @@ export default function SessionPage() {
                   className="w-full h-11 border-neutral-200 hover:bg-neutral-50 rounded-lg font-normal"
                 >
                   View who owes what
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={() => router.push(`/session/${code}/edit`)}
+                  className="w-full h-11 border-neutral-200 hover:bg-neutral-50 rounded-lg font-normal"
+                >
+                  <Pencil className="w-4 h-4 mr-2" />
+                  Edit receipts
                 </Button>
               </>
             )}
