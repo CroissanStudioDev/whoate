@@ -1,11 +1,12 @@
 "use client";
 
-import { ArrowLeft, Check, Loader2, Upload } from "lucide-react";
+import { ArrowLeft, Check, Loader2, Plus, Trash2, Upload } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -15,7 +16,14 @@ import {
 } from "@/components/ui/select";
 import { useSessionStore, useUserStore } from "@/lib/store";
 import type { Receipt, ReceiptItem } from "@/types";
-import { formatCurrency } from "@/types";
+import { CURRENCY_SYMBOLS, formatCurrency } from "@/types";
+
+interface ManualItem {
+  id: string;
+  name: string;
+  quantity: number;
+  unitPrice: string;
+}
 
 export default function UploadPage() {
   const params = useParams();
@@ -23,14 +31,22 @@ export default function UploadPage() {
   const code = (params.code as string).toUpperCase();
 
   const { participantId } = useUserStore();
-  const { session, addReceipt, setSession } = useSessionStore();
+  const { session, addReceipt } = useSessionStore();
 
+  const [mode, setMode] = useState<"photo" | "manual">("photo");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [paidBy, setPaidBy] = useState(participantId || "");
   const [dragActive, setDragActive] = useState(false);
-  const [_preview, setPreview] = useState<string | null>(null);
+
+  // Manual entry state
+  const [currency, setCurrency] = useState("USD");
+  const [items, setItems] = useState<ManualItem[]>([
+    { id: "1", name: "", quantity: 1, unitPrice: "" },
+  ]);
+  const [tax, setTax] = useState("");
+  const [tip, setTip] = useState("");
 
   const handleUpload = useCallback(
     async (base64: string) => {
@@ -72,6 +88,57 @@ export default function UploadPage() {
     [code, participantId, paidBy, addReceipt]
   );
 
+  const handleManualSubmit = async () => {
+    if (!participantId) {
+      toast.error("Please join the session first");
+      return;
+    }
+
+    const validItems = items.filter((item) => item.name.trim() && item.unitPrice);
+    if (validItems.length === 0) {
+      toast.error("Add at least one item");
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadError(null);
+
+    try {
+      const res = await fetch(`/api/sessions/${code}/receipts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          manual: true,
+          participantId,
+          paidBy: paidBy || participantId,
+          currency,
+          items: validItems.map((item) => ({
+            name: item.name.trim(),
+            quantity: item.quantity,
+            unitPrice: Number.parseFloat(item.unitPrice) || 0,
+          })),
+          tax: Number.parseFloat(tax) || 0,
+          tip: Number.parseFloat(tip) || 0,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to create receipt");
+      }
+
+      const data = await res.json();
+      setReceipt(data.receipt);
+      addReceipt(data.receipt);
+      toast.success(`Created receipt with ${data.receipt.items.length} items!`);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Failed to create receipt");
+      toast.error("Failed to create receipt");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleFile = useCallback(
     async (file: File) => {
       if (!file.type.startsWith("image/") && file.type !== "application/pdf") {
@@ -81,7 +148,6 @@ export default function UploadPage() {
       const reader = new FileReader();
       reader.onload = async (e) => {
         const base64 = e.target?.result as string;
-        setPreview(base64);
         await handleUpload(base64);
       };
       reader.readAsDataURL(file);
@@ -121,29 +187,26 @@ export default function UploadPage() {
     [handleFile]
   );
 
-  const updatePaidBy = async (newPaidBy: string) => {
-    setPaidBy(newPaidBy);
-    if (receipt && participantId) {
-      try {
-        const res = await fetch(`/api/sessions/${code}/receipts`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            receiptId: receipt.id,
-            participantId,
-            updates: { paidBy: newPaidBy },
-          }),
-        });
+  const addItem = () => {
+    setItems([...items, { id: Date.now().toString(), name: "", quantity: 1, unitPrice: "" }]);
+  };
 
-        if (res.ok) {
-          const data = await res.json();
-          setReceipt(data.receipt);
-          setSession(data.session);
-        }
-      } catch {
-        // Ignore errors
-      }
+  const removeItem = (id: string) => {
+    if (items.length > 1) {
+      setItems(items.filter((item) => item.id !== id));
     }
+  };
+
+  const updateItem = (id: string, field: keyof ManualItem, value: string | number) => {
+    setItems(items.map((item) => (item.id === id ? { ...item, [field]: value } : item)));
+  };
+
+  const calculateTotal = () => {
+    const itemsTotal = items.reduce((sum, item) => {
+      const price = Number.parseFloat(item.unitPrice) || 0;
+      return sum + price * item.quantity;
+    }, 0);
+    return itemsTotal + (Number.parseFloat(tax) || 0) + (Number.parseFloat(tip) || 0);
   };
 
   return (
@@ -158,16 +221,16 @@ export default function UploadPage() {
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Link>
-          <h1 className="text-lg font-medium mb-3">Upload receipt</h1>
+          <h1 className="text-lg font-medium mb-3">Add receipt</h1>
           <p className="text-neutral-500">Session {code}</p>
         </header>
 
         <div className="space-y-8">
           {/* Who paid */}
-          {session && (
+          {session && !receipt && (
             <div className="space-y-2">
               <span className="text-sm text-neutral-500 block">Who paid?</span>
-              <Select value={paidBy} onValueChange={updatePaidBy}>
+              <Select value={paidBy} onValueChange={setPaidBy}>
                 <SelectTrigger className="h-11 border-neutral-200 rounded-lg">
                   <SelectValue placeholder="Select who paid" />
                 </SelectTrigger>
@@ -182,8 +245,36 @@ export default function UploadPage() {
             </div>
           )}
 
-          {/* Upload area */}
+          {/* Mode toggle */}
           {!receipt && !isUploading && (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setMode("photo")}
+                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                  mode === "photo"
+                    ? "bg-neutral-900 text-white"
+                    : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+                }`}
+              >
+                Upload photo
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("manual")}
+                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                  mode === "manual"
+                    ? "bg-neutral-900 text-white"
+                    : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+                }`}
+              >
+                Add manually
+              </button>
+            </div>
+          )}
+
+          {/* Photo upload area */}
+          {mode === "photo" && !receipt && !isUploading && (
             <section
               aria-label="Upload receipt"
               className={`border-2 border-dashed rounded-lg p-12 text-center transition-colors ${
@@ -209,12 +300,134 @@ export default function UploadPage() {
             </section>
           )}
 
+          {/* Manual entry form */}
+          {mode === "manual" && !receipt && !isUploading && (
+            <div className="space-y-6">
+              {/* Currency */}
+              <div className="space-y-2">
+                <span className="text-sm text-neutral-500 block">Currency</span>
+                <Select value={currency} onValueChange={setCurrency}>
+                  <SelectTrigger className="h-11 border-neutral-200 rounded-lg">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(CURRENCY_SYMBOLS).map(([code, symbol]) => (
+                      <SelectItem key={code} value={code}>
+                        {symbol} {code}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Items */}
+              <div className="space-y-3">
+                <span className="text-sm text-neutral-500 block">Items</span>
+                {items.map((item) => (
+                  <div key={item.id} className="flex gap-2">
+                    <Input
+                      placeholder="Item name"
+                      value={item.name}
+                      onChange={(e) => updateItem(item.id, "name", e.target.value)}
+                      className="flex-1 h-11 border-neutral-200 rounded-lg"
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Qty"
+                      value={item.quantity}
+                      onChange={(e) =>
+                        updateItem(item.id, "quantity", Number.parseInt(e.target.value, 10) || 1)
+                      }
+                      className="w-16 h-11 border-neutral-200 rounded-lg text-center"
+                      min={1}
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Price"
+                      value={item.unitPrice}
+                      onChange={(e) => updateItem(item.id, "unitPrice", e.target.value)}
+                      className="w-24 h-11 border-neutral-200 rounded-lg"
+                      step="0.01"
+                      min="0"
+                    />
+                    {items.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeItem(item.id)}
+                        className="p-2 text-neutral-400 hover:text-neutral-600"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={addItem}
+                  className="flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-700"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add item
+                </button>
+              </div>
+
+              {/* Tax & Tip */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <span className="text-sm text-neutral-500 block">Tax (optional)</span>
+                  <Input
+                    type="number"
+                    placeholder="0.00"
+                    value={tax}
+                    onChange={(e) => setTax(e.target.value)}
+                    className="h-11 border-neutral-200 rounded-lg"
+                    step="0.01"
+                    min="0"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <span className="text-sm text-neutral-500 block">Tip (optional)</span>
+                  <Input
+                    type="number"
+                    placeholder="0.00"
+                    value={tip}
+                    onChange={(e) => setTip(e.target.value)}
+                    className="h-11 border-neutral-200 rounded-lg"
+                    step="0.01"
+                    min="0"
+                  />
+                </div>
+              </div>
+
+              {/* Total preview */}
+              <div className="flex justify-between py-3 border-t border-neutral-200">
+                <span className="font-medium">Total</span>
+                <span className="font-mono text-lg">
+                  {formatCurrency(calculateTotal(), currency)}
+                </span>
+              </div>
+
+              {/* Submit */}
+              <Button
+                onClick={handleManualSubmit}
+                disabled={isUploading}
+                className="w-full h-11 bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg font-normal"
+              >
+                Create receipt
+              </Button>
+            </div>
+          )}
+
           {/* Loading */}
           {isUploading && (
             <div className="py-12 text-center">
               <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-neutral-400" />
-              <p className="text-neutral-500">Processing receipt...</p>
-              <p className="text-sm text-neutral-400 mt-1">This may take a few seconds</p>
+              <p className="text-neutral-500">
+                {mode === "photo" ? "Processing receipt..." : "Creating receipt..."}
+              </p>
+              {mode === "photo" && (
+                <p className="text-sm text-neutral-400 mt-1">This may take a few seconds</p>
+              )}
             </div>
           )}
 
@@ -230,7 +443,7 @@ export default function UploadPage() {
             <div className="space-y-6">
               <div className="flex items-center gap-2 text-neutral-600">
                 <Check className="w-5 h-5" />
-                <span className="font-medium">{receipt.items.length} items found</span>
+                <span className="font-medium">{receipt.items.length} items</span>
               </div>
 
               {/* Items list */}

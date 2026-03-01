@@ -8,14 +8,22 @@ interface RouteParams {
   params: Promise<{ code: string }>;
 }
 
-// POST /api/sessions/[code]/receipts - Upload and process a receipt
+// Manual receipt item input
+interface ManualItem {
+  name: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+// POST /api/sessions/[code]/receipts - Upload and process a receipt (or create manually)
 export async function POST(request: Request, { params }: RouteParams) {
   try {
     const { code } = await params;
-    const { imageBase64, participantId, paidBy } = await request.json();
+    const body = await request.json();
+    const { participantId, paidBy } = body;
 
-    if (!imageBase64 || !participantId) {
-      return NextResponse.json({ error: "Image and participant ID are required" }, { status: 400 });
+    if (!participantId) {
+      return NextResponse.json({ error: "Participant ID is required" }, { status: 400 });
     }
 
     const session = await getSession(code.toUpperCase());
@@ -35,18 +43,53 @@ export async function POST(request: Request, { params }: RouteParams) {
       return NextResponse.json({ error: "Maximum 50 receipts per session" }, { status: 400 });
     }
 
-    // Parse receipt with OpenAI
-    const ocrResult = await parseReceipt(imageBase64);
+    let items: ReceiptItem[];
+    let currency: string;
+    let tax: number;
+    let tip: number;
 
-    // Create receipt items
-    const items: ReceiptItem[] = ocrResult.items.map((item) => ({
-      id: uuid(),
-      name: item.name,
-      quantity: item.quantity,
-      unitPrice: item.unit_price,
-      totalPrice: item.total_price,
-      claims: [],
-    }));
+    // Check if this is a manual entry or image upload
+    if (body.manual && body.items) {
+      // Manual entry
+      const manualItems: ManualItem[] = body.items;
+      currency = body.currency || "USD";
+      tax = body.tax || 0;
+      tip = body.tip || 0;
+
+      if (!manualItems.length) {
+        return NextResponse.json({ error: "At least one item is required" }, { status: 400 });
+      }
+
+      items = manualItems.map((item) => ({
+        id: uuid(),
+        name: item.name.trim(),
+        quantity: item.quantity || 1,
+        unitPrice: item.unitPrice,
+        totalPrice: (item.quantity || 1) * item.unitPrice,
+        claims: [],
+      }));
+    } else if (body.imageBase64) {
+      // Image upload - parse with OCR
+      const ocrResult = await parseReceipt(body.imageBase64);
+
+      items = ocrResult.items.map((item) => ({
+        id: uuid(),
+        name: item.name,
+        quantity: item.quantity,
+        unitPrice: item.unit_price,
+        totalPrice: item.total_price,
+        claims: [],
+      }));
+
+      currency = ocrResult.currency;
+      tax = ocrResult.tax ?? 0;
+      tip = ocrResult.tip ?? 0;
+    } else {
+      return NextResponse.json(
+        { error: "Either image or manual items are required" },
+        { status: 400 }
+      );
+    }
 
     // Check item limit
     const totalItems = session.receipts.reduce((sum, r) => sum + r.items.length, 0) + items.length;
@@ -54,19 +97,19 @@ export async function POST(request: Request, { params }: RouteParams) {
       return NextResponse.json({ error: "Maximum 500 items per session" }, { status: 400 });
     }
 
-    // Calculate subtotal from items if not provided
-    const calculatedSubtotal = items.reduce((sum, item) => sum + item.totalPrice, 0);
+    // Calculate subtotal from items
+    const subtotal = items.reduce((sum, item) => sum + item.totalPrice, 0);
 
     const receipt: Receipt = {
       id: uuid(),
       uploadedBy: participantId,
       paidBy: paidBy || participantId,
-      currency: ocrResult.currency,
+      currency,
       items,
-      subtotal: ocrResult.subtotal ?? calculatedSubtotal,
-      tax: ocrResult.tax ?? 0,
-      tip: ocrResult.tip ?? 0,
-      total: ocrResult.total ?? calculatedSubtotal + (ocrResult.tax ?? 0) + (ocrResult.tip ?? 0),
+      subtotal,
+      tax,
+      tip,
+      total: subtotal + tax + tip,
       processedAt: new Date().toISOString(),
     };
 
