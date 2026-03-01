@@ -29,6 +29,7 @@ export interface Receipt {
   tax: number;
   tip: number;
   total: number;
+  taxIncluded: boolean; // true = tax already in item prices, false = add tax on top
   processedAt: string;
 }
 

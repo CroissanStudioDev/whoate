@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Check, Loader2, Plus, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, Check, Info, Loader2, Plus, Trash2, Upload } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
@@ -47,6 +47,8 @@ export default function UploadPage() {
   ]);
   const [tax, setTax] = useState("");
   const [tip, setTip] = useState("");
+  const [taxIncluded, setTaxIncluded] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const handleUpload = useCallback(
     async (base64: string) => {
@@ -76,6 +78,7 @@ export default function UploadPage() {
 
         const data = await res.json();
         setReceipt(data.receipt);
+        setTaxIncluded(data.receipt.taxIncluded || false);
         addReceipt(data.receipt);
         toast.success(`Found ${data.receipt.items.length} items!`);
       } catch (err) {
@@ -129,6 +132,7 @@ export default function UploadPage() {
 
       const data = await res.json();
       setReceipt(data.receipt);
+      setTaxIncluded(data.receipt.taxIncluded || false);
       addReceipt(data.receipt);
       toast.success(`Created receipt with ${data.receipt.items.length} items!`);
     } catch (err) {
@@ -207,6 +211,34 @@ export default function UploadPage() {
       return sum + price * item.quantity;
     }, 0);
     return itemsTotal + (Number.parseFloat(tax) || 0) + (Number.parseFloat(tip) || 0);
+  };
+
+  const handleTaxIncludedToggle = async (newValue: boolean) => {
+    if (!receipt || !participantId) return;
+
+    setIsUpdating(true);
+    try {
+      const res = await fetch(`/api/sessions/${code}/receipts`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          receiptId: receipt.id,
+          participantId,
+          updates: { taxIncluded: newValue },
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setReceipt(data.receipt);
+        setTaxIncluded(newValue);
+        toast.success(newValue ? "Tax marked as included" : "Tax will be added on top");
+      }
+    } catch {
+      toast.error("Failed to update");
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   return (
@@ -468,6 +500,37 @@ export default function UploadPage() {
                 ))}
               </div>
 
+              {/* Tax toggle */}
+              {receipt.tax > 0 && (
+                <div className="p-4 rounded-lg border border-neutral-200 bg-neutral-50">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Info className="w-4 h-4 text-neutral-400" />
+                      <span className="text-sm">Tax included in prices?</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleTaxIncludedToggle(!taxIncluded)}
+                      disabled={isUpdating}
+                      className={`relative w-12 h-6 rounded-full transition-colors ${
+                        taxIncluded ? "bg-neutral-900" : "bg-neutral-300"
+                      } ${isUpdating ? "opacity-50" : ""}`}
+                    >
+                      <span
+                        className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+                          taxIncluded ? "left-7" : "left-1"
+                        }`}
+                      />
+                    </button>
+                  </div>
+                  <p className="text-xs text-neutral-400 mt-2">
+                    {taxIncluded
+                      ? "Tax won't be added on top when splitting"
+                      : "Tax will be split proportionally among participants"}
+                  </p>
+                </div>
+              )}
+
               {/* Totals */}
               <div className="pt-4 border-t border-neutral-200 space-y-2">
                 <div className="flex justify-between text-sm text-neutral-500">
@@ -476,8 +539,8 @@ export default function UploadPage() {
                 </div>
                 {receipt.tax > 0 && (
                   <div className="flex justify-between text-sm text-neutral-500">
-                    <span>Tax</span>
-                    <span>{formatCurrency(receipt.tax, receipt.currency)}</span>
+                    <span>Tax {taxIncluded && "(included)"}</span>
+                    <span>{taxIncluded ? "—" : formatCurrency(receipt.tax, receipt.currency)}</span>
                   </div>
                 )}
                 {receipt.tip > 0 && (

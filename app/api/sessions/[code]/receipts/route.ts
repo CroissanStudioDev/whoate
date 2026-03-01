@@ -100,6 +100,9 @@ export async function POST(request: Request, { params }: RouteParams) {
     // Calculate subtotal from items
     const subtotal = items.reduce((sum, item) => sum + item.totalPrice, 0);
 
+    // taxIncluded: true means tax is already in item prices, don't add on top
+    const taxIncluded = body.taxIncluded ?? false;
+
     const receipt: Receipt = {
       id: uuid(),
       uploadedBy: participantId,
@@ -109,7 +112,8 @@ export async function POST(request: Request, { params }: RouteParams) {
       subtotal,
       tax,
       tip,
-      total: subtotal + tax + tip,
+      total: taxIncluded ? subtotal + tip : subtotal + tax + tip,
+      taxIncluded,
       processedAt: new Date().toISOString(),
     };
 
@@ -163,6 +167,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     if (updates.paidBy) receipt.paidBy = updates.paidBy;
     if (updates.tax !== undefined) receipt.tax = updates.tax;
     if (updates.tip !== undefined) receipt.tip = updates.tip;
+    if (updates.taxIncluded !== undefined) receipt.taxIncluded = updates.taxIncluded;
 
     if (updates.items) {
       receipt.items = updates.items.map((item: ReceiptItem) => ({
@@ -172,8 +177,12 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       }));
       // Recalculate totals
       receipt.subtotal = receipt.items.reduce((sum, item) => sum + item.totalPrice, 0);
-      receipt.total = receipt.subtotal + receipt.tax + receipt.tip;
     }
+
+    // Recalculate total based on taxIncluded
+    receipt.total = receipt.taxIncluded
+      ? receipt.subtotal + receipt.tip
+      : receipt.subtotal + receipt.tax + receipt.tip;
 
     session.receipts[receiptIndex] = receipt;
     await setSession(session);

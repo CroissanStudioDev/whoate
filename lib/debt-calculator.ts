@@ -61,7 +61,9 @@ function calculateReceiptShares(
   });
 
   // Distribute tax and tip proportionally based on each person's subtotal
-  const taxAndTip = (receipt.tax || 0) + (receipt.tip || 0);
+  // Only add tax if taxIncluded is false (tax not already in item prices)
+  const taxToAdd = receipt.taxIncluded ? 0 : receipt.tax || 0;
+  const taxAndTip = taxToAdd + (receipt.tip || 0);
   if (taxAndTip > 0 && totalClaimedAmount > 0) {
     shares.forEach((amount, participantId) => {
       if (amount > 0) {
