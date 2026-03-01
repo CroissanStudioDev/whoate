@@ -59,6 +59,31 @@ npm run dev
 | `REDIS_URL` | No | - | Redis connection URL. Uses in-memory store if not set |
 | `SESSION_TTL` | No | 2592000 | Session expiry in seconds (default: 30 days) |
 
+### Alternative AI Providers
+
+WhoAte supports any OpenAI-compatible API. See [docs/OCR_MODELS_RESEARCH.md](docs/OCR_MODELS_RESEARCH.md) for detailed benchmarks.
+
+**OpenRouter (recommended for cost savings):**
+```bash
+OPENAI_BASE_URL=https://openrouter.ai/api/v1
+OPENAI_API_KEY=sk-or-v1-your-key
+OPENAI_MODEL=qwen/qwen-2.5-vl-7b-instruct  # $0.20/M tokens, 100+ languages
+```
+
+**Ollama (local, private):**
+```bash
+OPENAI_BASE_URL=http://localhost:11434/v1
+OPENAI_API_KEY=ollama
+OPENAI_MODEL=glm-ocr  # Free, runs on CPU
+```
+
+**Google Gemini:**
+```bash
+OPENAI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+OPENAI_API_KEY=your-gemini-key
+OPENAI_MODEL=gemini-2.5-flash  # $0.10/M tokens
+```
+
 ## How It Works
 
 1. **Create a Session** - Enter your name and create a new session
