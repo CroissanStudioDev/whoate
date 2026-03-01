@@ -1,60 +1,37 @@
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
-const plusJakartaSans = Plus_Jakarta_Sans({
-  variable: "--font-sans",
+const geistSans = Geist({
+  variable: "--font-geist-sans",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
-  display: "swap",
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: "WhoAte - The Smartest Way to Split Bills",
-  description:
-    "Snap a receipt, let AI extract items, swipe to claim, see who owes whom. No sign-up required.",
-  keywords: [
-    "bill splitter",
-    "receipt scanner",
-    "split expenses",
-    "group expenses",
-    "AI receipt",
-    "OCR",
-    "split bill app",
-  ],
+  title: "WhoAte",
+  description: "Split bills with friends. Snap a receipt, claim items, see who owes what.",
+  keywords: ["bill splitter", "receipt scanner", "split expenses"],
   authors: [{ name: "CroissanStudio", url: "https://croissanstudio.ru" }],
-  creator: "CroissanStudio",
   openGraph: {
-    title: "WhoAte - The Smartest Way to Split Bills",
-    description:
-      "Snap a receipt, let AI extract items, swipe to claim, see who owes whom.",
+    title: "WhoAte",
+    description: "Split bills with friends",
     type: "website",
     url: "https://whoate.app",
-    siteName: "WhoAte",
-    locale: "en_US",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "WhoAte - The Smartest Way to Split Bills",
-    description:
-      "Snap a receipt, let AI extract items, swipe to claim, see who owes whom.",
   },
   manifest: "/manifest.json",
-  robots: {
-    index: true,
-    follow: true,
-  },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#2563EB" },
-    { media: "(prefers-color-scheme: dark)", color: "#0F172A" },
-  ],
+  themeColor: "#ffffff",
 };
 
 export default function RootLayout({
@@ -64,9 +41,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${plusJakartaSans.variable} font-sans antialiased`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} font-sans`}>
         {children}
-        <Toaster position="top-center" richColors />
+        <Toaster position="top-center" />
       </body>
     </html>
   );
