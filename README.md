@@ -15,6 +15,23 @@ Split bills fairly with friends. Scan receipts, claim items, see who owes what.
 - **🌍 Multi-currency** - Supports 20+ currencies with auto-detection
 - **🔗 No Sign-up** - Just share a link, no accounts needed
 - **📱 PWA Ready** - Install on your phone like a native app
+- **🤖 AI Assistant Skill** - Use with Claude Code, Cursor, OpenClaw
+
+## Claude Code / Cursor Skill
+
+Use WhoAte directly from your AI coding assistant:
+
+```bash
+# Install the skill
+claude skill install https://github.com/CroissanStudioDev/whoate/tree/main/skills/whoate.md
+
+# Use it
+/whoate parse ~/receipt.jpg
+/whoate create "Alice"
+/whoate summary ABC123
+```
+
+See [skills/README.md](skills/README.md) for more details.
 
 ## Quick Start
 
