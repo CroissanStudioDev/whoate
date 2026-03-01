@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Globe, Loader2, Pencil } from "lucide-react";
+import { ArrowRight, ClipboardList, Globe, Loader2, Pencil } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -219,6 +219,11 @@ export default function SessionPage() {
     (sum, r) => sum + r.items.filter((i) => i.claims.length > 0).length,
     0
   );
+  const myClaimedItems = session.receipts.reduce(
+    (sum, r) =>
+      sum + r.items.filter((i) => i.claims.some((c) => c.participantId === participantId)).length,
+    0
+  );
 
   return (
     <div className="min-h-screen bg-white">
@@ -338,6 +343,15 @@ export default function SessionPage() {
                   className="w-full h-11 border-neutral-200 hover:bg-neutral-50 rounded-lg font-normal"
                 >
                   Select your items
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={() => router.push(`/session/${code}/my-items`)}
+                  className="w-full h-11 border-neutral-200 hover:bg-neutral-50 rounded-lg font-normal"
+                >
+                  <ClipboardList className="w-4 h-4 mr-2" />
+                  My items {myClaimedItems > 0 && `(${myClaimedItems})`}
                 </Button>
 
                 <Button
