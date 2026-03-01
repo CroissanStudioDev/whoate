@@ -1,15 +1,12 @@
 "use client";
 
-import { AlertCircle, ListChecks, Loader2, PieChart, Upload } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ParticipantList } from "@/components/session/ParticipantList";
-import { ShareSession } from "@/components/session/ShareSession";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
 import { useSessionStore, useUserStore } from "@/lib/store";
 import type { Session } from "@/types";
 
@@ -26,8 +23,8 @@ export default function SessionPage() {
   const [showNameInput, setShowNameInput] = useState(false);
   const [newName, setNewName] = useState("");
   const [isJoining, setIsJoining] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  // Fetch session data
   useEffect(() => {
     const fetchSession = async () => {
       try {
@@ -39,7 +36,6 @@ export default function SessionPage() {
         const data = await res.json();
         setSession(data.session);
 
-        // Check if user needs to join
         if (participantId) {
           const isInSession = data.session.participants.some(
             (p: Session["participants"][0]) => p.id === participantId
@@ -58,7 +54,6 @@ export default function SessionPage() {
     };
 
     fetchSession();
-    // Poll for updates every 5 seconds
     const interval = setInterval(fetchSession, 5000);
     return () => clearInterval(interval);
   }, [code, participantId, setSession]);
@@ -103,56 +98,73 @@ export default function SessionPage() {
     }
   };
 
+  const copyCode = async () => {
+    await navigator.clipboard.writeText(code);
+    setCopied(true);
+    toast.success("Code copied!");
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-neutral-400" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="max-w-md w-full">
-          <CardContent className="pt-6 text-center">
-            <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
-            <h2 className="text-xl font-semibold mb-2">Session Not Found</h2>
-            <p className="text-muted-foreground mb-4">{error}</p>
-            <Button onClick={() => router.push("/")}>Go Home</Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-white">
+        <div className="max-w-md mx-auto px-6 py-16">
+          <header className="mb-12">
+            <h1 className="text-lg font-medium mb-3">Session not found</h1>
+            <p className="text-neutral-500">{error}</p>
+          </header>
+          <Button
+            onClick={() => router.push("/")}
+            className="w-full h-11 bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg font-normal"
+          >
+            Go home
+          </Button>
+        </div>
       </div>
     );
   }
 
   if (showNameInput) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="max-w-md w-full">
-          <CardHeader>
-            <CardTitle>Join Session</CardTitle>
-            <CardDescription>Enter your name to join session {code}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Input
-              placeholder="Your name"
-              value={newName || name || ""}
-              onChange={(e) => setNewName(e.target.value)}
-              className="text-lg"
-            />
-            <Button className="w-full" onClick={handleJoin} disabled={isJoining}>
-              {isJoining ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Joining...
-                </>
-              ) : (
-                "Join Session"
-              )}
+      <div className="min-h-screen bg-white">
+        <div className="max-w-md mx-auto px-6 py-16">
+          <header className="mb-12">
+            <h1 className="text-lg font-medium mb-3">Join session</h1>
+            <p className="text-neutral-500">Enter your name to join {code}</p>
+          </header>
+
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <label htmlFor="joinName" className="text-sm text-neutral-500">
+                Your name
+              </label>
+              <Input
+                id="joinName"
+                placeholder="Name"
+                value={newName || name || ""}
+                onChange={(e) => setNewName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleJoin()}
+                className="h-11 border-neutral-200 rounded-lg focus-visible:ring-neutral-900"
+              />
+            </div>
+
+            <Button
+              onClick={handleJoin}
+              disabled={isJoining}
+              className="w-full h-11 bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg font-normal"
+            >
+              {isJoining ? <Loader2 className="w-4 h-4 animate-spin" /> : "Join session"}
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     );
   }
@@ -167,102 +179,111 @@ export default function SessionPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
-      <div className="container max-w-2xl mx-auto px-4 py-8">
+    <div className="min-h-screen bg-white">
+      <div className="max-w-md mx-auto px-6 py-16">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold mb-1">🍽️ WhoAte</h1>
-          <p className="text-muted-foreground">Session {code}</p>
-        </div>
+        <header className="mb-12">
+          <Link
+            href="/"
+            className="text-lg font-medium mb-3 block hover:text-neutral-600 transition-colors"
+          >
+            WhoAte
+          </Link>
+          <p className="text-neutral-500">Session {code}</p>
+        </header>
 
-        <div className="space-y-6">
-          {/* Share */}
-          <ShareSession code={code} />
+        <div className="space-y-8">
+          {/* Share code */}
+          <div className="space-y-2">
+            <span className="text-sm text-neutral-500 block">Share this code with friends</span>
+            <button
+              type="button"
+              onClick={copyCode}
+              className="w-full p-4 rounded-lg border border-neutral-200 font-mono text-2xl tracking-widest text-center hover:bg-neutral-50 transition-colors"
+            >
+              {copied ? "Copied!" : code}
+            </button>
+          </div>
 
           {/* Participants */}
-          <Card>
-            <CardContent className="pt-6">
-              <ParticipantList
-                participants={session.participants}
-                currentUserId={participantId || undefined}
-                creatorId={session.creatorId}
-              />
-            </CardContent>
-          </Card>
-
-          <Separator />
-
-          {/* Actions */}
-          <div className="grid gap-4">
-            {/* Upload Receipt */}
-            <Button
-              size="lg"
-              className="h-16 text-lg"
-              onClick={() => router.push(`/session/${code}/upload`)}
-            >
-              <Upload className="w-5 h-5 mr-2" />
-              Upload Receipt
-            </Button>
-
-            {/* Select Items */}
-            {hasReceipts && (
-              <Button
-                size="lg"
-                variant="outline"
-                className="h-16 text-lg"
-                onClick={() => router.push(`/session/${code}/select`)}
-              >
-                <ListChecks className="w-5 h-5 mr-2" />
-                Select Your Items
-                <span className="ml-2 text-sm text-muted-foreground">
-                  ({claimedItems}/{totalItems} claimed)
-                </span>
-              </Button>
-            )}
-
-            {/* View Summary */}
-            {hasReceipts && (
-              <Button
-                size="lg"
-                variant="secondary"
-                className="h-16 text-lg"
-                onClick={() => router.push(`/session/${code}/summary`)}
-              >
-                <PieChart className="w-5 h-5 mr-2" />
-                View Who Owes What
-              </Button>
-            )}
+          <div className="space-y-3">
+            <span className="text-sm text-neutral-500 block">
+              Participants ({session.participants.length})
+            </span>
+            <div className="space-y-2">
+              {session.participants.map((p) => (
+                <div
+                  key={p.id}
+                  className="flex items-center justify-between p-3 rounded-lg border border-neutral-200"
+                >
+                  <span className="font-medium">
+                    {p.name}
+                    {p.id === participantId && (
+                      <span className="text-neutral-400 font-normal"> (you)</span>
+                    )}
+                  </span>
+                  <span className="text-sm text-neutral-400">
+                    {p.id === session.creatorId && "host"}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Stats */}
           {hasReceipts && (
-            <Card>
-              <CardContent className="pt-6">
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div>
-                    <p className="text-3xl font-bold">{session.receipts.length}</p>
-                    <p className="text-sm text-muted-foreground">Receipts</p>
-                  </div>
-                  <div>
-                    <p className="text-3xl font-bold">{totalItems}</p>
-                    <p className="text-sm text-muted-foreground">Items</p>
-                  </div>
-                  <div>
-                    <p className="text-3xl font-bold">{session.participants.length}</p>
-                    <p className="text-sm text-muted-foreground">People</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="grid grid-cols-3 gap-4 py-4 border-y border-neutral-100">
+              <div className="text-center">
+                <p className="text-2xl font-medium">{session.receipts.length}</p>
+                <p className="text-sm text-neutral-400">receipts</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-medium">{totalItems}</p>
+                <p className="text-sm text-neutral-400">items</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-medium">{claimedItems}</p>
+                <p className="text-sm text-neutral-400">claimed</p>
+              </div>
+            </div>
           )}
+
+          {/* Actions */}
+          <div className="space-y-3">
+            <Button
+              onClick={() => router.push(`/session/${code}/upload`)}
+              className="w-full h-11 bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg font-normal"
+            >
+              Upload receipt
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+
+            {hasReceipts && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => router.push(`/session/${code}/select`)}
+                  className="w-full h-11 border-neutral-200 hover:bg-neutral-50 rounded-lg font-normal"
+                >
+                  Select your items
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={() => router.push(`/session/${code}/summary`)}
+                  className="w-full h-11 border-neutral-200 hover:bg-neutral-50 rounded-lg font-normal"
+                >
+                  View who owes what
+                </Button>
+              </>
+            )}
+          </div>
 
           {/* Empty state */}
           {!hasReceipts && (
-            <Card className="border-dashed">
-              <CardContent className="pt-6 text-center">
-                <p className="text-muted-foreground">No receipts yet. Upload one to get started!</p>
-              </CardContent>
-            </Card>
+            <p className="text-center text-neutral-400 py-4">
+              No receipts yet. Upload one to get started.
+            </p>
           )}
         </div>
       </div>

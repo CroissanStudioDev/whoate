@@ -40,9 +40,7 @@ export default function Home() {
       setUser(userName.trim(), participantId);
       router.push(`/session/${session.code}`);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to create session"
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to create session");
     } finally {
       setIsCreating(false);
     }
@@ -76,9 +74,7 @@ export default function Home() {
       setUser(userName.trim(), participantId);
       router.push(`/session/${session.code}`);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to join session"
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to join session");
     } finally {
       setIsJoining(false);
     }
@@ -105,8 +101,11 @@ export default function Home() {
         <main className="space-y-8">
           {/* Name */}
           <div className="space-y-2">
-            <label className="text-sm text-neutral-500">Your name</label>
+            <label htmlFor="userName" className="text-sm text-neutral-500">
+              Your name
+            </label>
             <Input
+              id="userName"
               placeholder="Name"
               value={userName}
               onChange={(e) => setUserName(e.target.value)}
@@ -154,11 +153,7 @@ export default function Home() {
               disabled={isCreating || isJoining}
               className="w-full h-11 border-neutral-200 hover:bg-neutral-50 rounded-lg font-normal"
             >
-              {isJoining ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                "Join session"
-              )}
+              {isJoining ? <Loader2 className="w-4 h-4 animate-spin" /> : "Join session"}
             </Button>
           </div>
         </main>

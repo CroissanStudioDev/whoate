@@ -3,7 +3,6 @@
 import { motion, PanInfo, useMotionValue, useTransform } from "framer-motion";
 import { Check, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { formatCurrency } from "@/types";
 
 interface SwipeCardProps {
@@ -30,7 +29,7 @@ export function SwipeCard({
   const x = useMotionValue(0);
   const y = useMotionValue(0);
 
-  const rotateZ = useTransform(x, [-200, 200], [-15, 15]);
+  const rotateZ = useTransform(x, [-200, 200], [-10, 10]);
   const opacity = useTransform(x, [-200, -100, 0, 100, 200], [0.5, 1, 1, 1, 0.5]);
 
   const leftIndicatorOpacity = useTransform(x, [-100, 0], [1, 0]);
@@ -53,22 +52,22 @@ export function SwipeCard({
     <div className="relative w-full max-w-sm mx-auto">
       {/* Indicators */}
       <motion.div
-        className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 bg-red-500 text-white p-3 rounded-full"
+        className="absolute -left-2 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full border border-neutral-200 bg-white"
         style={{ opacity: leftIndicatorOpacity }}
       >
-        <X className="w-6 h-6" />
+        <X className="w-5 h-5 text-neutral-400" />
       </motion.div>
       <motion.div
-        className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 bg-green-500 text-white p-3 rounded-full"
+        className="absolute -right-2 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full border border-neutral-900 bg-neutral-900"
         style={{ opacity: rightIndicatorOpacity }}
       >
-        <Check className="w-6 h-6" />
+        <Check className="w-5 h-5 text-white" />
       </motion.div>
       <motion.div
-        className="absolute left-1/2 -top-4 -translate-x-1/2 z-10 bg-blue-500 text-white p-3 rounded-full"
+        className="absolute left-1/2 -top-2 -translate-x-1/2 z-10 p-2 rounded-full border border-neutral-200 bg-white"
         style={{ opacity: upIndicatorOpacity }}
       >
-        <Users className="w-6 h-6" />
+        <Users className="w-5 h-5 text-neutral-600" />
       </motion.div>
 
       {/* Card */}
@@ -80,19 +79,17 @@ export function SwipeCard({
         style={{ x, y, rotateZ, opacity }}
         className="cursor-grab active:cursor-grabbing"
       >
-        <Card className="p-8 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 shadow-xl">
-          <div className="text-center space-y-4">
-            <h2 className="text-2xl font-bold">{item.name}</h2>
+        <div className="p-8 rounded-lg border border-neutral-200 bg-white">
+          <div className="text-center space-y-3">
+            <h2 className="text-xl font-medium">{item.name}</h2>
             {item.quantity > 1 && (
-              <p className="text-muted-foreground">
+              <p className="text-neutral-400">
                 {item.quantity} × {formatCurrency(item.unitPrice, currency)}
               </p>
             )}
-            <p className="text-4xl font-bold text-primary">
-              {formatCurrency(item.totalPrice, currency)}
-            </p>
+            <p className="text-3xl font-mono">{formatCurrency(item.totalPrice, currency)}</p>
           </div>
-        </Card>
+        </div>
       </motion.div>
 
       {/* Action buttons */}
@@ -100,34 +97,34 @@ export function SwipeCard({
         <Button
           variant="outline"
           size="lg"
-          className="rounded-full w-14 h-14 p-0 border-red-200 hover:bg-red-50 hover:border-red-300"
+          className="rounded-full w-12 h-12 p-0 border-neutral-200 hover:bg-neutral-50"
           onClick={onSwipeLeft}
         >
-          <X className="w-6 h-6 text-red-500" />
+          <X className="w-5 h-5 text-neutral-400" />
         </Button>
         <Button
           variant="outline"
           size="lg"
-          className="rounded-full w-14 h-14 p-0 border-blue-200 hover:bg-blue-50 hover:border-blue-300"
+          className="rounded-full w-12 h-12 p-0 border-neutral-200 hover:bg-neutral-50"
           onClick={onSwipeUp}
         >
-          <Users className="w-6 h-6 text-blue-500" />
+          <Users className="w-5 h-5 text-neutral-600" />
         </Button>
         <Button
           variant="outline"
           size="lg"
-          className="rounded-full w-14 h-14 p-0 border-green-200 hover:bg-green-50 hover:border-green-300"
+          className="rounded-full w-12 h-12 p-0 border-neutral-900 bg-neutral-900 hover:bg-neutral-800"
           onClick={onSwipeRight}
         >
-          <Check className="w-6 h-6 text-green-500" />
+          <Check className="w-5 h-5 text-white" />
         </Button>
       </div>
 
       {/* Legend */}
-      <div className="flex justify-center gap-6 mt-4 text-sm text-muted-foreground">
-        <span>← Not mine</span>
-        <span>↑ Shared</span>
-        <span>Mine →</span>
+      <div className="flex justify-center gap-6 mt-4 text-sm text-neutral-400">
+        <span>← skip</span>
+        <span>↑ shared</span>
+        <span>mine →</span>
       </div>
     </div>
   );
