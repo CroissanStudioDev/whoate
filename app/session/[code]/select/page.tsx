@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Check, Loader2, UserPlus, X } from "lucide-react";
+import { ArrowLeft, Check, Loader2, SkipForward, UserPlus, X } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -26,7 +26,6 @@ export default function SelectPage() {
   const { participantId } = useUserStore();
   const { session, setSession } = useSessionStore();
 
-  const [currentReceiptIndex, setCurrentReceiptIndex] = useState(0);
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [showSharedDialog, setShowSharedDialog] = useState(false);
@@ -34,6 +33,9 @@ export default function SelectPage() {
   const [currentItem, setCurrentItem] = useState<ReceiptItem | null>(null);
   const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
   const [selectedQuantity, setSelectedQuantity] = useState(1);
+  const [skippedItems, setSkippedItems] = useState<Set<string>>(new Set());
+  const [notMineItems, setNotMineItems] = useState<Set<string>>(new Set());
+  const [isReviewingSkipped, setIsReviewingSkipped] = useState(false);
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -50,25 +52,63 @@ export default function SelectPage() {
     fetchSession();
   }, [code, setSession]);
 
-  const receipt = session?.receipts[currentReceiptIndex];
-  const items = receipt?.items || [];
-  const item = items[currentItemIndex];
+  // Get all items flattened with receipt info, excluding "not mine" items
+  const allItems =
+    session?.receipts.flatMap((r) =>
+      r.items.filter((i) => !notMineItems.has(i.id)).map((i) => ({ item: i, receipt: r }))
+    ) || [];
+
+  // During initial pass, skip already skipped items; during review, only show skipped
+  const availableItems = isReviewingSkipped
+    ? allItems.filter((x) => skippedItems.has(x.item.id))
+    : allItems.filter((x) => !skippedItems.has(x.item.id));
+
+  const currentItemData = availableItems[currentItemIndex];
+  const item = currentItemData?.item;
+  const receipt = currentItemData?.receipt;
 
   const alreadyClaimed = item?.claims.some((c) => c.participantId === participantId);
 
   const nextItem = useCallback(() => {
-    if (!session) return;
-
-    if (currentItemIndex < items.length - 1) {
+    if (currentItemIndex < availableItems.length - 1) {
       setCurrentItemIndex(currentItemIndex + 1);
-    } else if (currentReceiptIndex < session.receipts.length - 1) {
-      setCurrentReceiptIndex(currentReceiptIndex + 1);
+    } else if (!isReviewingSkipped && skippedItems.size > 0) {
+      // Start reviewing skipped items
+      setIsReviewingSkipped(true);
       setCurrentItemIndex(0);
+      toast("Now reviewing skipped items", { icon: "🔄" });
     } else {
       toast.success("All items reviewed!");
       router.push(`/session/${code}/summary`);
     }
-  }, [session, currentItemIndex, currentReceiptIndex, items.length, router, code]);
+  }, [
+    currentItemIndex,
+    availableItems.length,
+    isReviewingSkipped,
+    skippedItems.size,
+    router,
+    code,
+  ]);
+
+  const handleNotMine = () => {
+    if (!item) return;
+    setNotMineItems((prev) => new Set(prev).add(item.id));
+    // Also remove from skipped if it was there
+    setSkippedItems((prev) => {
+      const next = new Set(prev);
+      next.delete(item.id);
+      return next;
+    });
+    nextItem();
+  };
+
+  const handleSkip = () => {
+    if (!item) return;
+    if (!isReviewingSkipped) {
+      setSkippedItems((prev) => new Set(prev).add(item.id));
+    }
+    nextItem();
+  };
 
   const claimItem = async (
     type: "individual" | "shared",
@@ -101,7 +141,7 @@ export default function SelectPage() {
     }
   };
 
-  const handleSwipeLeft = () => nextItem();
+  const handleSwipeLeft = () => handleNotMine();
   const handleSwipeRight = () => {
     if (!item) return;
     // If quantity > 1, show quantity dialog
@@ -163,11 +203,8 @@ export default function SelectPage() {
     );
   }
 
-  const totalItems = session.receipts.reduce((sum, r) => sum + r.items.length, 0);
-  const currentProgress =
-    session.receipts.slice(0, currentReceiptIndex).reduce((sum, r) => sum + r.items.length, 0) +
-    currentItemIndex +
-    1;
+  const totalItems = availableItems.length;
+  const currentProgress = Math.min(currentItemIndex + 1, totalItems);
 
   const myTotal = session.receipts.reduce((sum, r) => {
     return (
@@ -205,9 +242,14 @@ export default function SelectPage() {
           </Link>
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-lg font-medium">Select your items</h1>
+              <h1 className="text-lg font-medium">
+                {isReviewingSkipped ? "Review skipped items" : "Select your items"}
+              </h1>
               <p className="text-neutral-500">
                 {currentProgress} of {totalItems}
+                {!isReviewingSkipped && skippedItems.size > 0 && (
+                  <span className="text-neutral-400"> · {skippedItems.size} skipped</span>
+                )}
               </p>
             </div>
             {myTotal > 0 && receipt && (
@@ -240,14 +282,22 @@ export default function SelectPage() {
               onSwipeUp={handleSwipeUp}
             />
             {/* Action buttons */}
-            <div className="flex justify-center gap-4 mt-6">
+            <div className="flex justify-center items-center gap-3 mt-6">
               <button
                 type="button"
-                onClick={handleSwipeLeft}
-                className="w-14 h-14 rounded-full border-2 border-neutral-200 flex items-center justify-center text-neutral-400 hover:border-neutral-400 hover:text-neutral-600 transition-colors"
-                title="Skip"
+                onClick={handleNotMine}
+                className="w-12 h-12 rounded-full border-2 border-red-200 flex items-center justify-center text-red-400 hover:border-red-400 hover:text-red-500 transition-colors"
+                title="Not mine"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5" />
+              </button>
+              <button
+                type="button"
+                onClick={handleSkip}
+                className="w-12 h-12 rounded-full border-2 border-neutral-200 flex items-center justify-center text-neutral-400 hover:border-neutral-400 hover:text-neutral-600 transition-colors"
+                title="Skip for now"
+              >
+                <SkipForward className="w-5 h-5" />
               </button>
               <button
                 type="button"
@@ -260,11 +310,18 @@ export default function SelectPage() {
               <button
                 type="button"
                 onClick={handleSwipeUp}
-                className="w-14 h-14 rounded-full border-2 border-neutral-200 flex items-center justify-center text-neutral-400 hover:border-neutral-400 hover:text-neutral-600 transition-colors"
-                title="Share"
+                className="w-12 h-12 rounded-full border-2 border-neutral-200 flex items-center justify-center text-neutral-400 hover:border-neutral-400 hover:text-neutral-600 transition-colors"
+                title="Share with others"
               >
-                <UserPlus className="w-6 h-6" />
+                <UserPlus className="w-5 h-5" />
               </button>
+            </div>
+            {/* Button labels */}
+            <div className="flex justify-center items-center gap-3 mt-2 text-xs text-neutral-400">
+              <span className="w-12 text-center">Not mine</span>
+              <span className="w-12 text-center">Skip</span>
+              <span className="w-14 text-center">Mine</span>
+              <span className="w-12 text-center">Share</span>
             </div>
           </div>
         ) : (
