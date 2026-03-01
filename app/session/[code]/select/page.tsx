@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Check, Loader2 } from "lucide-react";
+import { ArrowLeft, Check, Loader2, UserPlus, X } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -239,6 +239,33 @@ export default function SelectPage() {
               onSwipeRight={handleSwipeRight}
               onSwipeUp={handleSwipeUp}
             />
+            {/* Action buttons */}
+            <div className="flex justify-center gap-4 mt-6">
+              <button
+                type="button"
+                onClick={handleSwipeLeft}
+                className="w-14 h-14 rounded-full border-2 border-neutral-200 flex items-center justify-center text-neutral-400 hover:border-neutral-400 hover:text-neutral-600 transition-colors"
+                title="Skip"
+              >
+                <X className="w-6 h-6" />
+              </button>
+              <button
+                type="button"
+                onClick={handleSwipeRight}
+                className="w-14 h-14 rounded-full border-2 border-neutral-900 bg-neutral-900 flex items-center justify-center text-white hover:bg-neutral-800 transition-colors"
+                title="Mine"
+              >
+                <Check className="w-6 h-6" />
+              </button>
+              <button
+                type="button"
+                onClick={handleSwipeUp}
+                className="w-14 h-14 rounded-full border-2 border-neutral-200 flex items-center justify-center text-neutral-400 hover:border-neutral-400 hover:text-neutral-600 transition-colors"
+                title="Share"
+              >
+                <UserPlus className="w-6 h-6" />
+              </button>
+            </div>
           </div>
         ) : (
           <div className="text-center py-12">
