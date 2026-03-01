@@ -2,7 +2,6 @@
 
 import { motion, PanInfo, useMotionValue, useTransform } from "framer-motion";
 import { Check, Users, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/types";
 
 interface SwipeCardProps {
@@ -91,41 +90,6 @@ export function SwipeCard({
           </div>
         </div>
       </motion.div>
-
-      {/* Action buttons */}
-      <div className="flex justify-center gap-4 mt-6">
-        <Button
-          variant="outline"
-          size="lg"
-          className="rounded-full w-12 h-12 p-0 border-neutral-200 hover:bg-neutral-50"
-          onClick={onSwipeLeft}
-        >
-          <X className="w-5 h-5 text-neutral-400" />
-        </Button>
-        <Button
-          variant="outline"
-          size="lg"
-          className="rounded-full w-12 h-12 p-0 border-neutral-200 hover:bg-neutral-50"
-          onClick={onSwipeUp}
-        >
-          <Users className="w-5 h-5 text-neutral-600" />
-        </Button>
-        <Button
-          variant="outline"
-          size="lg"
-          className="rounded-full w-12 h-12 p-0 border-neutral-900 bg-neutral-900 hover:bg-neutral-800"
-          onClick={onSwipeRight}
-        >
-          <Check className="w-5 h-5 text-white" />
-        </Button>
-      </div>
-
-      {/* Legend */}
-      <div className="flex justify-center gap-6 mt-4 text-sm text-neutral-400">
-        <span>← skip</span>
-        <span>↑ shared</span>
-        <span>mine →</span>
-      </div>
     </div>
   );
 }
