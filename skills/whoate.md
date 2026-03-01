@@ -3,7 +3,7 @@
 <skill>
 name: whoate
 description: Parse receipts and split bills with WhoAte API
-version: 1.4.0
+version: 1.5.0
 author: CroissanStudio
 </skill>
 
@@ -135,6 +135,19 @@ curl -X DELETE "$WHOATE_URL/api/sessions/CODE/receipts/RECEIPT_ID" \
 curl "$WHOATE_URL/api/sessions/CODE"
 ```
 
+### 6b. Set Translation Language
+```bash
+curl -X PATCH "$WHOATE_URL/api/sessions/CODE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "participantId": "PARTICIPANT_ID",
+    "translateTo": "en"
+  }'
+```
+Supported languages: `en`, `ru`, `es`, `fr`, `de`, `it`, `pt`, `zh`, `ja`, `ko`, `ar`, `hi`, `th`, `vi`, `tr`, `pl`, `uk`, `nl`
+
+Set to empty string (`""`) to disable translation.
+
 ### 7. Get Debt Summary
 ```bash
 curl "$WHOATE_URL/api/sessions/CODE/summary"
@@ -176,6 +189,7 @@ When user says:
 - **"summary"** or **"who owes what"** → Use Get Debt Summary endpoint
 - **"claim ITEM"** → Use Claim Item endpoint
 - **"claim 1 of 2"** → Use Claim Item with `claimedQuantity: 1`
+- **"translate to English"** or **"перевести на русский"** → Use Set Translation Language endpoint
 
 ## Response Format
 

@@ -8,7 +8,30 @@ export interface Session {
   creatorId: string;
   participants: Participant[];
   receipts: Receipt[];
+  translateTo?: string; // ISO language code (e.g., "en", "ru", "es") for translating receipt items
 }
+
+// Supported translation languages
+export const SUPPORTED_LANGUAGES: Record<string, string> = {
+  en: "English",
+  ru: "Русский",
+  es: "Español",
+  fr: "Français",
+  de: "Deutsch",
+  it: "Italiano",
+  pt: "Português",
+  zh: "中文",
+  ja: "日本語",
+  ko: "한국어",
+  ar: "العربية",
+  hi: "हिन्दी",
+  th: "ไทย",
+  vi: "Tiếng Việt",
+  tr: "Türkçe",
+  pl: "Polski",
+  uk: "Українська",
+  nl: "Nederlands",
+};
 
 // Participant
 export interface Participant {

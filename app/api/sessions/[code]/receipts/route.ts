@@ -69,8 +69,8 @@ export async function POST(request: Request, { params }: RouteParams) {
         claims: [],
       }));
     } else if (body.imageBase64) {
-      // Image upload - parse with OCR
-      const ocrResult = await parseReceipt(body.imageBase64);
+      // Image upload - parse with OCR (with optional translation)
+      const ocrResult = await parseReceipt(body.imageBase64, session.translateTo);
 
       items = ocrResult.items.map((item) => ({
         id: uuid(),

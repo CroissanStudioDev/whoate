@@ -1,14 +1,22 @@
 "use client";
 
-import { ArrowRight, Loader2, Pencil } from "lucide-react";
+import { ArrowRight, Globe, Loader2, Pencil } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useSessionStore, useUserStore } from "@/lib/store";
 import type { Session } from "@/types";
+import { SUPPORTED_LANGUAGES } from "@/types";
 
 export default function SessionPage() {
   const params = useParams();
@@ -24,6 +32,8 @@ export default function SessionPage() {
   const [newName, setNewName] = useState("");
   const [isJoining, setIsJoining] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [translateTo, setTranslateTo] = useState<string>("");
+  const [isUpdatingTranslation, setIsUpdatingTranslation] = useState(false);
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -35,6 +45,7 @@ export default function SessionPage() {
         }
         const data = await res.json();
         setSession(data.session);
+        setTranslateTo(data.session.translateTo || "");
 
         if (participantId) {
           const isInSession = data.session.participants.some(
@@ -103,6 +114,37 @@ export default function SessionPage() {
     setCopied(true);
     toast.success("Code copied!");
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleTranslationChange = async (lang: string) => {
+    if (!participantId) return;
+
+    setIsUpdatingTranslation(true);
+    try {
+      const res = await fetch(`/api/sessions/${code}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          participantId,
+          translateTo: lang === "none" ? "" : lang,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setSession(data.session);
+        setTranslateTo(lang === "none" ? "" : lang);
+        toast.success(
+          lang === "none"
+            ? "Translation disabled"
+            : `Items will be translated to ${SUPPORTED_LANGUAGES[lang]}`
+        );
+      }
+    } catch {
+      toast.error("Failed to update translation");
+    } finally {
+      setIsUpdatingTranslation(false);
+    }
   };
 
   if (isLoading) {
@@ -247,6 +289,36 @@ export default function SessionPage() {
               </div>
             </div>
           )}
+
+          {/* Translation setting */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm text-neutral-500">
+              <Globe className="w-4 h-4" />
+              <span>Translate receipt items</span>
+            </div>
+            <Select
+              value={translateTo || "none"}
+              onValueChange={handleTranslationChange}
+              disabled={isUpdatingTranslation}
+            >
+              <SelectTrigger className="h-11 border-neutral-200 rounded-lg">
+                <SelectValue placeholder="Select language" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Original (no translation)</SelectItem>
+                {Object.entries(SUPPORTED_LANGUAGES).map(([langCode, langName]) => (
+                  <SelectItem key={langCode} value={langCode}>
+                    {langName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {translateTo && (
+              <p className="text-xs text-neutral-400">
+                New receipts will have items translated to {SUPPORTED_LANGUAGES[translateTo]}
+              </p>
+            )}
+          </div>
 
           {/* Actions */}
           <div className="space-y-3">

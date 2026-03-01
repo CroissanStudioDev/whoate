@@ -25,6 +25,38 @@ export async function GET(_request: Request, { params }: RouteParams) {
   }
 }
 
+// PATCH /api/sessions/[code] - Update session settings
+export async function PATCH(request: Request, { params }: RouteParams) {
+  try {
+    const { code } = await params;
+    const { participantId, translateTo } = await request.json();
+
+    const session = await getSession(code.toUpperCase());
+
+    if (!session) {
+      return NextResponse.json({ error: "Session not found" }, { status: 404 });
+    }
+
+    // Verify participant exists
+    const participant = session.participants.find((p) => p.id === participantId);
+    if (!participant) {
+      return NextResponse.json({ error: "Participant not found" }, { status: 403 });
+    }
+
+    // Update translateTo setting (can be set by any participant)
+    if (translateTo !== undefined) {
+      session.translateTo = translateTo || undefined; // Empty string means no translation
+    }
+
+    await setSession(session);
+
+    return NextResponse.json({ session });
+  } catch (error) {
+    console.error("Error updating session:", error);
+    return NextResponse.json({ error: "Failed to update session" }, { status: 500 });
+  }
+}
+
 // DELETE /api/sessions/[code] - Close session (creator only)
 export async function DELETE(request: Request, { params }: RouteParams) {
   try {

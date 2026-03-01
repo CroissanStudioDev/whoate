@@ -167,6 +167,79 @@ DELETE /api/sessions/:code
 
 ---
 
+### Update Session Settings
+
+Update session settings like translation language.
+
+```http
+PATCH /api/sessions/:code
+```
+
+**Request Body:**
+
+```json
+{
+  "participantId": "p_abc123",
+  "translateTo": "en"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `participantId` | string | Yes | ID of any participant in the session |
+| `translateTo` | string | No | ISO language code for translation (empty string to disable) |
+
+**Supported Languages:**
+
+| Code | Language |
+|------|----------|
+| `en` | English |
+| `ru` | Русский |
+| `es` | Español |
+| `fr` | Français |
+| `de` | Deutsch |
+| `it` | Italiano |
+| `pt` | Português |
+| `zh` | 中文 |
+| `ja` | 日本語 |
+| `ko` | 한국어 |
+| `th` | ไทย |
+| `vi` | Tiếng Việt |
+| `ar` | العربية |
+| `hi` | हिन्दी |
+| `tr` | Türkçe |
+| `pl` | Polski |
+| `uk` | Українська |
+| `nl` | Nederlands |
+
+**Response:** `200 OK`
+
+```json
+{
+  "session": {
+    "code": "ABC123",
+    "translateTo": "en",
+    ...
+  }
+}
+```
+
+**Example:**
+
+```bash
+# Enable English translation
+curl -X PATCH https://whoate.app/api/sessions/ABC123 \
+  -H "Content-Type: application/json" \
+  -d '{"participantId": "p_abc123", "translateTo": "en"}'
+
+# Disable translation
+curl -X PATCH https://whoate.app/api/sessions/ABC123 \
+  -H "Content-Type: application/json" \
+  -d '{"participantId": "p_abc123", "translateTo": ""}'
+```
+
+---
+
 ### Join Session
 
 Adds a new participant to the session.
@@ -818,6 +891,9 @@ Future versions will support webhooks for:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.5.0 | Mar 2026 | Add receipt item translation (18 languages), useful for international travel |
+| 1.4.0 | Mar 2026 | Add OCR result editing, tax included toggle |
+| 1.3.0 | Mar 2026 | Add skip/not mine actions, action buttons below swipe card |
 | 1.2.0 | Mar 2026 | Add quantity selection for claims, receipt editing, receipt deletion, health endpoint |
 | 1.1.0 | Mar 2026 | Add manual receipt entry (without photo) |
 | 1.0.0 | Mar 2026 | Initial API release |

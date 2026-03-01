@@ -20,7 +20,12 @@ function getModel(): string {
   return process.env.OPENAI_MODEL || "google/gemini-3.1-flash-image-preview";
 }
 
-const SYSTEM_PROMPT = `You are a receipt parser. Extract all line items from the receipt image.
+function getSystemPrompt(translateTo?: string): string {
+  const translationRule = translateTo
+    ? `- IMPORTANT: Translate ALL item names to ${translateTo}. Keep the original meaning but use ${translateTo} language.`
+    : "- Keep item names in their original language from the receipt";
+
+  return `You are a receipt parser. Extract all line items from the receipt image.
 
 Return JSON in this exact format:
 {
@@ -48,16 +53,18 @@ Rules:
 - If unsure about a value, use null
 - Always return valid JSON, no markdown code blocks
 - Extract ALL items visible on the receipt
-- For items like "2x Pizza", set quantity to 2`;
+- For items like "2x Pizza", set quantity to 2
+${translationRule}`;
+}
 
-export async function parseReceipt(imageBase64: string): Promise<OCRResult> {
+export async function parseReceipt(imageBase64: string, translateTo?: string): Promise<OCRResult> {
   const client = getOpenAI();
   const response = await client.chat.completions.create({
     model: getModel(),
     messages: [
       {
         role: "system",
-        content: SYSTEM_PROMPT,
+        content: getSystemPrompt(translateTo),
       },
       {
         role: "user",
