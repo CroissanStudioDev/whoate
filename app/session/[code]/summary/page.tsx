@@ -7,7 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useSessionStore } from "@/lib/store";
-import type { DebtSummary, Participant } from "@/types";
+import type { DebtSummary, Participant, Session } from "@/types";
 import { CURRENCY_SYMBOLS } from "@/types";
 
 export default function SummaryPage() {
@@ -21,6 +21,7 @@ export default function SummaryPage() {
   const [summaries, setSummaries] = useState<DebtSummary[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [textSummary, setTextSummary] = useState("");
+  const [hasClaims, setHasClaims] = useState(false);
 
   const fetchSummary = useCallback(async () => {
     setIsLoading(true);
@@ -29,6 +30,10 @@ export default function SummaryPage() {
       if (sessionRes.ok) {
         const sessionData = await sessionRes.json();
         setSession(sessionData.session);
+        // Check if any items have claims
+        const session = sessionData.session as Session;
+        const anyClaims = session.receipts.some((r) => r.items.some((i) => i.claims.length > 0));
+        setHasClaims(anyClaims);
       }
 
       const res = await fetch(`/api/sessions/${code}/summary`);
@@ -159,6 +164,20 @@ export default function SummaryPage() {
                 Share
               </Button>
             </div>
+          </div>
+        ) : hasClaims ? (
+          <div className="text-center py-12">
+            <p className="text-2xl mb-2">All settled!</p>
+            <p className="text-neutral-500 mb-4">
+              Everyone who claimed items has already paid their share.
+            </p>
+            <Button
+              variant="outline"
+              onClick={() => router.push(`/session/${code}/select`)}
+              className="h-11 border-neutral-200 hover:bg-neutral-50 rounded-lg font-normal"
+            >
+              Select more items
+            </Button>
           </div>
         ) : (
           <div className="text-center py-12">
